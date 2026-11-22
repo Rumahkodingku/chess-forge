@@ -53,6 +53,8 @@ File: `docs/evidence/R1/export-proof.webm`
 - `docs/evidence/R1/studio.png`
 - `docs/evidence/R1/studio-list.png`
 - `docs/evidence/R1/dashboard.png`
+- `docs/evidence/R1/studio-mobile.png`
+- `docs/evidence/R1/dashboard-mobile.png`
 
 ## Verified behaviour
 
@@ -69,6 +71,7 @@ File: `docs/evidence/R1/export-proof.webm`
 - Reload and reopen preserve the project.
 - Studio list loads the saved project.
 - Dashboard shows recent game and recent project.
+- Analysis, studio, and dashboard have zero horizontal overflow at 390 px.
 
 ## Known limitations
 
