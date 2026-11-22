@@ -683,7 +683,7 @@ R2 replaces the SVG analysis board with Chessground, adds PGN file upload, multi
 
 - Execution date: 2026-11-22
 - Gate G5: PASS
-- Unit tests: 33 passing
+- Unit tests: 35 passing
 - Dev E2E: 7 passing
 - Production E2E: 1 passing
 - Export proof: VP9/Opus WebM, 1080x1920, 3.02 seconds, audio present

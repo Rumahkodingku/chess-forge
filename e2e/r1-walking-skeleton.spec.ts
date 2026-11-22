@@ -12,7 +12,50 @@ test("R1 walking skeleton imports, analyses, forges, exports, and reopens", asyn
   await page.waitForURL(/\/analysis\/[0-9a-f-]{36}$/);
   await expect(page.getByText("White vs Black")).toBeVisible();
 
-  // Replay at least five moves, then analyse the position before move five.
+  // Replay five plies with the next control, then exercise arrows and
+  // first/previous/next/last before analysing.
+  for (let step = 0; step < 5; step += 1) {
+    await page.getByRole("button", { name: "Next move" }).click();
+  }
+  await expect(page.getByRole("button", { name: "3. Bb5" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.getByRole("button", { name: "2. Nf3" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("button", { name: "3. Bb5" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+
+  await page.getByRole("button", { name: "First move" }).click();
+  await expect(page.getByRole("button", { name: "Start" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await page.getByRole("button", { name: "Last move" }).click();
+  await expect(page.getByRole("button", { name: "5... Be7" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await page.getByRole("button", { name: "Previous move" }).click();
+  await expect(page.getByRole("button", { name: "5. O-O" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await page.getByRole("button", { name: "Next move" }).click();
+  await expect(page.getByRole("button", { name: "5... Be7" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+
   await page.getByRole("button", { name: "3. Bb5" }).click();
   await page.getByRole("button", { name: "Analyse position" }).click();
   await expect(page.getByText("White perspective")).toBeVisible({
@@ -20,6 +63,17 @@ test("R1 walking skeleton imports, analyses, forges, exports, and reopens", asyn
   });
   await expect(page.getByText("Best move")).toBeVisible();
 
+  // Selecting a move after analysis must not leave the engine stuck.
+  await page.getByRole("button", { name: "2. Nf3" }).click();
+  await expect(
+    page.getByRole("button", { name: "Analyse position" }),
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "Analyse position" }).click();
+  await expect(page.getByText("White perspective")).toBeVisible({
+    timeout: 90_000,
+  });
+
+  await page.getByRole("button", { name: "3. Bb5" }).click();
   await page.getByRole("button", { name: "Create 3-second scene" }).click();
   await page.waitForURL(/\/studio\/[0-9a-f-]{36}$/);
   await expect(page.getByText("Project details")).toBeVisible({

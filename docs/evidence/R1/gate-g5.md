@@ -14,7 +14,7 @@ Import fixture -> persist game -> replay five moves -> analyse position -> creat
 
 | Check | Result |
 | --- | --- |
-| `npm run check:all` | PASS, 33 unit tests, production build succeeds |
+| `npm run check:all` | PASS, 35 unit tests, production build succeeds |
 | `npm run test:e2e` | PASS, 7 browser tests |
 | `npm run test:e2e:prod` | PASS, production walking skeleton |
 | R0 export proof | PASS after shared composition refactor |
@@ -59,8 +59,9 @@ File: `docs/evidence/R1/export-proof.webm`
 - Fixture import writes a game to IndexedDB.
 - Analysis view loads by game ID.
 - Move selection updates the SVG board.
-- Keyboard left and right navigation works.
+- First, previous, next, last, and arrow-key replay were exercised in production E2E.
 - Stockfish returns eval, best move, and MultiPV 3.
+- Selecting a move after analysis resets the engine without leaving it stuck.
 - Create scene writes a project with a game snapshot.
 - Studio preview renders the scene composition.
 - WebM export includes audio.

@@ -1,6 +1,7 @@
 import {
   analysisCacheKey,
   assertValidFen,
+  isBestMoveLine,
   parseBestMove,
   parseUciInfo,
 } from "@/features/analysis/engine/uci";
@@ -179,11 +180,23 @@ export class BrowserStockfishEngine implements StockfishEngine {
           }
         }
 
-        const best = parseBestMove(line);
-        if (best !== null) {
-          bestMoveUci = best;
+        if (isBestMoveLine(line)) {
+          const best = parseBestMove(line);
           clearTimeout(timeout);
           cleanup();
+
+          if (best === null) {
+            this.setState("ready");
+            reject(
+              new AppError(
+                "ENGINE_ERROR",
+                "Stockfish found no legal move in this position.",
+              ),
+            );
+            return;
+          }
+
+          bestMoveUci = best;
           const sorted = [...variations.values()].sort(
             (left, right) => left.multipv - right.multipv,
           );
@@ -231,7 +244,7 @@ export class BrowserStockfishEngine implements StockfishEngine {
   }
 
   stop(): void {
-    if (!this.worker) return;
+    if (!this.worker || this.state !== "analysing") return;
     this.setState("stopping");
     this.worker.postMessage("stop");
   }

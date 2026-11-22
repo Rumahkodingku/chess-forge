@@ -11,6 +11,7 @@ import {
   useVideoConfig,
 } from "remotion";
 import { BoardSvg } from "@/features/studio/rendering/board-svg";
+import { boardFenForProgress } from "@/features/studio/rendering/scene-timing";
 import type { Scene, VideoProject } from "@/features/studio/scene/scene.types";
 
 export interface SceneCompositionProps {
@@ -61,7 +62,7 @@ export function SceneComposition({ project, scene }: SceneCompositionProps) {
     }
   }, [move, scene.boardState.fen]);
 
-  const boardFen = move?.fenAfter ?? scene.boardState.fen;
+  const boardFen = boardFenForProgress(scene, move, progress);
   const label = scene.textOverlays[0]?.text;
   const players = project.gameSnapshot
     ? `${project.gameSnapshot.metadata.white} vs ${project.gameSnapshot.metadata.black}`
@@ -132,6 +133,7 @@ export function SceneComposition({ project, scene }: SceneCompositionProps) {
           <BoardSvg
             fen={boardFen}
             lastMove={move?.uci}
+            hideSquare={progress < 1 ? movingPiece?.from : undefined}
             coordinates
             animation={
               movingPiece
