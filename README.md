@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ChessForge
 
-## Getting Started
+ChessForge is a single-user, local-first chess analysis and video creation studio. It is built with Next.js, runs Stockfish in the browser, and is designed to export chess videos without a cloud rendering service.
 
-First, run the development server:
+**Current status:** Phase R0 verified locally. Gates G0–G4 pass, including a real MP4 and WebM export, Stockfish in a worker, PGN fixtures, and a healthy Docker container. Live Coolify basic auth is the remaining deployment step.
+
+## Requirements
+
+- Node.js 24 LTS for Docker and CI.
+- npm with the committed `package-lock.json`.
+- A current Chrome or Edge desktop browser for the media proof.
+- `ffprobe` is optional, used to validate exported files.
+
+## Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the development server |
+| `npm run build` | Production build |
+| `npm run start` | Run the production build |
+| `npm run lint` | Biome lint and formatting check |
+| `npm run format` | Format files with Biome |
+| `npm run typecheck` | TypeScript strict check |
+| `npm run test` | Vitest unit and integration tests |
+| `npm run test:e2e` | Playwright browser smoke tests |
+| `npm run validate:video` | Validate an exported file with `ffprobe` |
+| `npm run check:all` | Lint, typecheck, unit tests, and build |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## R0 technical labs
 
-## Learn More
+These pages are proof-of-concepts, not the daily workflow:
 
-To learn more about Next.js, take a look at the following resources:
+- `/labs/export` renders a five-second chess scene with Remotion and the browser media stack.
+- `/labs/engine` loads Stockfish in a Web Worker and returns MultiPV analysis.
+- `/labs/pgn` parses fixtures with comments, NAGs, variations, and FEN starts.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Local data
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Games, projects, templates, settings, and uploaded audio are stored in IndexedDB in the browser. The application does not have accounts, cloud project storage, or cloud rendering. Browser storage can be cleared, so backups are part of the release scope.
 
-## Deploy on Vercel
+## Documentation
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `docs/PRD.md`: product requirements.
+- `docs/ROADMAP.md`: phase plan, gates, and traceability.
+- `docs/specs/R0-foundation.md`: R0 technical specification.
+- `docs/adr/`: architecture decisions.
+- `docs/THIRD_PARTY_NOTICES.md`: licences and attribution.
+- `docs/evidence/R0/`: gate evidence.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment
+
+The project includes a multi-stage Dockerfile for Coolify or a VPS. The runtime uses Next.js standalone output, a non-root user, and a healthcheck at `/api/health`. Basic auth is configured at the reverse proxy, not in the application.
+
+```bash
+docker build -t chessforge .
+docker run --rm -p 3000:3000 chessforge
+```
+
+## Licences
+
+Stockfish is GPL-3.0. Chessground is GPL-3.0-or-later and will be added in R2. Remotion is used under the free individual licence. cburnett pieces are CC BY-SA 3.0 with attribution. See `docs/THIRD_PARTY_NOTICES.md`.

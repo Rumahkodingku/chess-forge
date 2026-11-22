@@ -1,0 +1,7 @@
+ChessForge built-in sound effects
+================================
+
+The move, capture, check, and checkmate WAV files in this directory were
+generated for ChessForge with FFmpeg sine synthesis.
+
+Dedicated to the public domain under CC0 1.0 Universal.
