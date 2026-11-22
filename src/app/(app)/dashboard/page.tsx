@@ -1,9 +1,9 @@
-import { ArrowUpRight, Clapperboard, Database, ScanSearch } from "lucide-react";
+import { ArrowUpRight, Database } from "lucide-react";
 import Link from "next/link";
-import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { StoragePanel } from "@/components/shared/storage-panel";
 import { Button } from "@/components/ui/button";
+import { RecentWork } from "@/features/dashboard/recent-work";
 import { BoardSvg } from "@/features/studio/rendering/board-svg";
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -12,22 +12,22 @@ const pipeline = [
   {
     label: "Import",
     detail: "PGN, Chess.com, Lichess",
-    phase: "R2",
+    phase: "R1 / R2",
   },
   {
     label: "Analyse",
     detail: "Stockfish in a worker",
-    phase: "R3",
+    phase: "R1 / R3",
   },
   {
     label: "Forge",
     detail: "Scenes, timeline, templates",
-    phase: "R5",
+    phase: "R1 / R5",
   },
   {
     label: "Export",
     detail: "Browser render to video",
-    phase: "R6",
+    phase: "R1 / R6",
   },
 ];
 
@@ -76,8 +76,8 @@ export default function DashboardPage() {
                 </Button>
               </div>
               <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
-                Import and replay arrive in R2. R0 establishes the local
-                foundation and the render proof.
+                R1 proves the first end-to-end path. R2 adds file upload and
+                external game sources.
               </p>
             </div>
             <div className="mx-auto w-full max-w-[260px] rounded-xl border border-border/80 bg-surface-2 p-2.5 board-shadow lg:mx-0 lg:ml-auto">
@@ -158,56 +158,7 @@ export default function DashboardPage() {
         </ol>
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-2">
-        <div className="rounded-xl border border-border/80 bg-surface-1 p-4">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-[14px] font-medium text-foreground">
-                Recent games
-              </h2>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Imported games will appear here.
-              </p>
-            </div>
-            <ScanSearch aria-hidden className="size-4 text-muted-foreground" />
-          </div>
-          <EmptyState
-            title="No games imported yet"
-            description="PGN paste and file import are built in R2. Until then, the analysis route shows the workspace shape without inventing a game."
-            action={
-              <Button asChild variant="outline" size="sm" className="h-9">
-                <Link href="/analysis">Open analysis</Link>
-              </Button>
-            }
-          />
-        </div>
-
-        <div className="rounded-xl border border-border/80 bg-surface-1 p-4">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-[14px] font-medium text-foreground">
-                Recent projects
-              </h2>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Saved video projects will appear here.
-              </p>
-            </div>
-            <Clapperboard
-              aria-hidden
-              className="size-4 text-muted-foreground"
-            />
-          </div>
-          <EmptyState
-            title="No video projects yet"
-            description="Projects are created from a game or selected moments in R5. The studio route currently explains the dependency instead of showing a fake timeline."
-            action={
-              <Button asChild variant="outline" size="sm" className="h-9">
-                <Link href="/studio">Open studio</Link>
-              </Button>
-            }
-          />
-        </div>
-      </section>
+      <RecentWork />
     </div>
   );
 }

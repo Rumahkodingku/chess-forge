@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { gameMetadataSchema, moveSchema } from "@/features/games/types";
 
 export const aspectRatioSchema = z.enum(["9:16", "16:9", "1:1", "4:5"]);
 
@@ -17,6 +18,14 @@ export const sceneTypeSchema = z.enum([
   "recap",
   "outro",
 ]);
+
+export const gameSnapshotSchema = z
+  .object({
+    metadata: gameMetadataSchema,
+    initialFen: z.string().min(1),
+    moves: z.array(moveSchema),
+  })
+  .strict();
 
 export const sceneSchema = z
   .object({
@@ -101,6 +110,7 @@ export const videoProjectSchema = z
     canvas: canvasSettingsSchema,
     frameRate: z.union([z.literal(30), z.literal(60)]),
     scenes: z.array(sceneSchema),
+    gameSnapshot: gameSnapshotSchema.optional(),
     tracks: z
       .object({
         text: z.array(z.string()),
@@ -130,4 +140,5 @@ export type AspectRatio = z.infer<typeof aspectRatioSchema>;
 export type CanvasSettings = z.infer<typeof canvasSettingsSchema>;
 export type SceneType = z.infer<typeof sceneTypeSchema>;
 export type Scene = z.infer<typeof sceneSchema>;
+export type GameSnapshot = z.infer<typeof gameSnapshotSchema>;
 export type VideoProject = z.infer<typeof videoProjectSchema>;

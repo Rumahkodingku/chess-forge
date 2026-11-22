@@ -5,7 +5,7 @@ spec_version: "1.0"
 roadmap_version: "1.0"
 prd_version: "1.0"
 prd_revision: "1.1"
-status: Ready for implementation
+status: Gate-verified
 last_updated: 2026-11-22
 language: en
 ---
@@ -676,6 +676,23 @@ R1 hands R2:
 - Evidence that the full path works.
 
 R2 replaces the SVG analysis board with Chessground, adds PGN file upload, multi-game selection, and external imports.
+
+---
+
+## 17. R1 execution record
+
+- Execution date: 2026-11-22
+- Gate G5: PASS
+- Unit tests: 33 passing
+- Dev E2E: 7 passing
+- Production E2E: 1 passing
+- Export proof: VP9/Opus WebM, 1080x1920, 3.02 seconds, audio present
+- Project reload: PASS
+- Dashboard recent game and project: PASS
+- R0 export proof: PASS after composition refactor
+- Known warning: `next start` warns because the production build uses standalone output; the production gate still passes
+
+Evidence: `docs/evidence/R1/`.
 
 ---
 

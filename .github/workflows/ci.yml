@@ -41,6 +41,9 @@ jobs:
       - name: Browser smoke tests
         run: npm run test:e2e
 
+      - name: Production walking skeleton E2E
+        run: npx playwright test -c playwright.production.config.ts
+
   docker:
     runs-on: ubuntu-latest
     needs: verify

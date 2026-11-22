@@ -1,135 +1,143 @@
-import {
-  ArrowUpRight,
-  Clapperboard,
-  Layers,
-  SlidersHorizontal,
-  Type,
-} from "lucide-react";
+"use client";
+
+import { ArrowRight, Clapperboard, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  createProjectRepository,
+  openChessForgeDatabase,
+} from "@/features/storage/db";
+import type { VideoProject } from "@/features/studio/scene/scene.types";
+import { toErrorMessage } from "@/lib/errors";
 
-const panels = [
-  {
-    label: "Preview",
-    detail: "The exact composition that will render.",
-    icon: Clapperboard,
-    phase: "R4",
-  },
-  {
-    label: "Timeline",
-    detail: "Scenes, duration, and tracks.",
-    icon: Layers,
-    phase: "R5",
-  },
-  {
-    label: "Inspector",
-    detail: "Camera, highlights, text, and audio.",
-    icon: SlidersHorizontal,
-    phase: "R5",
-  },
-  {
-    label: "Type",
-    detail: "Safe-area checked titles and captions.",
-    icon: Type,
-    phase: "R4",
-  },
-];
+type LoadState = "loading" | "ready" | "error";
 
 export default function StudioPage() {
+  const [projects, setProjects] = useState<VideoProject[]>([]);
+  const [state, setState] = useState<LoadState>("loading");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const db = await openChessForgeDatabase();
+        const stored = await createProjectRepository(db).list();
+        if (cancelled) return;
+        setProjects(
+          [...stored].sort((left, right) =>
+            right.updatedAt.localeCompare(left.updatedAt),
+          ),
+        );
+        setState("ready");
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(toErrorMessage(loadError));
+          setState("error");
+        }
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Studio"
-        description="Turn a game or a selected moment into a timed chess scene. The studio is editor-first, not a one-click preset."
+        description="One scene, one move, one export. R1 projects are deliberately small, but the path from game to video is real."
         actions={
-          <Button
-            asChild
-            variant="outline"
-            className="h-10 border-border/80 bg-transparent px-4"
-          >
-            <Link href="/templates">Browse directions</Link>
+          <Button asChild className="h-10 px-4">
+            <Link href="/analysis">Start from analysis</Link>
           </Button>
         }
       />
 
-      <section className="rounded-xl border border-border/80 bg-surface-1 p-5 sm:p-7">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.7fr)] lg:items-center">
-          <div>
-            <p className="text-[11px] font-medium text-brand">
-              Editor foundation
-            </p>
-            <h2 className="mt-3 max-w-lg text-balance text-[28px] leading-[1.08] font-semibold tracking-[-0.04em] sm:text-[32px]">
-              A project needs a game before it can become a video.
-            </h2>
-            <p className="mt-3 max-w-xl text-pretty text-[13px] leading-relaxed text-muted-foreground">
-              The studio route is intentionally empty in R0. It will consume the
-              same scene model used by the export proof, so preview and export
-              stay aligned.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Button asChild className="h-10 px-4">
-                <Link href="/analysis">Start from analysis</Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="h-10 border-border/80 bg-transparent px-4"
-              >
-                <Link href="/labs/export">Open export lab</Link>
-              </Button>
-            </div>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {panels.map((panel) => {
-              const Icon = panel.icon;
-              return (
-                <div
-                  key={panel.label}
-                  className="rounded-lg border border-border/80 bg-surface-2 p-3"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <Icon aria-hidden className="size-4 text-brand" />
-                    <span className="text-[10px] text-muted-foreground">
-                      {panel.phase}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-[12px] font-medium text-foreground">
-                    {panel.label}
-                  </p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                    {panel.detail}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+      {state === "loading" ? (
+        <div className="flex min-h-44 items-center justify-center rounded-xl border border-border/80 bg-surface-1">
+          <Loader2 aria-hidden className="size-5 animate-spin text-brand" />
+          <span className="sr-only">Loading projects</span>
         </div>
-      </section>
+      ) : null}
 
-      <section className="rounded-xl border border-border/80 bg-surface-1 p-4">
-        <div className="mb-4">
-          <h2 className="text-[14px] font-medium text-foreground">
-            Scene sequence
-          </h2>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            No project open. Create one after a game is imported.
-          </p>
-        </div>
+      {state === "error" ? (
         <EmptyState
-          title="Nothing to edit yet"
-          description="A scene sequence is generated from a full game or selected moments in R5. Until then, the export proof renders one legal move to a real file."
+          title="Projects could not load"
+          description={error ?? "Reload the page and try again."}
           action={
-            <Button asChild variant="outline" size="sm" className="h-9">
-              <Link href="/labs/export">
-                See the export proof
-                <ArrowUpRight aria-hidden className="size-3.5" />
-              </Link>
+            <Button asChild className="h-9">
+              <Link href="/analysis">Back to analysis</Link>
             </Button>
           }
         />
-      </section>
+      ) : null}
+
+      {state === "ready" && projects.length === 0 ? (
+        <EmptyState
+          title="No projects yet"
+          description="Import a game, select a move, and create a scene. The saved project will appear here."
+          action={
+            <Button asChild className="h-9">
+              <Link href="/analysis">Import a game</Link>
+            </Button>
+          }
+        />
+      ) : null}
+
+      {state === "ready" && projects.length > 0 ? (
+        <div className="space-y-3">
+          {projects.map((project) => (
+            <Card key={project.id} className="border-border/80 bg-surface-1">
+              <CardHeader className="flex flex-row items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-[15px]">
+                    <Clapperboard aria-hidden className="size-4 text-brand" />
+                    {project.name}
+                  </CardTitle>
+                  <CardDescription>
+                    {project.gameSnapshot
+                      ? `${project.gameSnapshot.metadata.white} vs ${project.gameSnapshot.metadata.black}`
+                      : "Source snapshot unavailable"}{" "}
+                    · {project.scenes.length} scene ·{" "}
+                    {project.canvas.aspectRatio}
+                  </CardDescription>
+                </div>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-9 border-border/80 bg-transparent px-3"
+                >
+                  <Link href={`/studio/${project.id}`}>
+                    Open
+                    <ArrowRight aria-hidden className="size-3.5" />
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <p className="text-[11px] text-muted-foreground">
+                  Updated{" "}
+                  {new Date(project.updatedAt).toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

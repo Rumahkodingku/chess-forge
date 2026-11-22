@@ -8,6 +8,7 @@ import {
   Square,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import type { ComponentType } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -27,17 +28,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ExportPocComposition } from "@/features/studio/rendering/export-poc";
+import {
+  createExportFixtureProject,
+  type ExportFixtureVariant,
+} from "@/features/studio/rendering/export-fixture";
+import { exportProject } from "@/features/studio/rendering/export-runner";
+import { SceneComposition } from "@/features/studio/rendering/scene-composition";
 
 const Player = dynamic(
   () => import("@remotion/player").then((module) => module.Player),
   { ssr: false },
 );
 
-const DURATION_IN_FRAMES = 150;
-const FPS = 30;
+const ScenePlayer = SceneComposition as unknown as ComponentType<
+  Record<string, unknown>
+>;
 
-type Variant = "portrait" | "landscape";
 type CodecId = "mp4-h264" | "webm-vp9" | "webm-vp8";
 type JobStatus =
   | "idle"
@@ -89,13 +95,8 @@ interface CapabilityEntry {
   issues: string[];
 }
 
-const dimensions: Record<Variant, { width: number; height: number }> = {
-  portrait: { width: 1080, height: 1920 },
-  landscape: { width: 1920, height: 1080 },
-};
-
 export default function ExportLabPage() {
-  const [variant, setVariant] = useState<Variant>("portrait");
+  const [variant, setVariant] = useState<ExportFixtureVariant>("portrait");
   const [selectedCodec, setSelectedCodec] = useState<CodecId>("webm-vp9");
   const [capabilities, setCapabilities] = useState<
     Record<string, CapabilityEntry>
@@ -109,7 +110,8 @@ export default function ExportLabPage() {
   const controllerRef = useRef<AbortController | null>(null);
   const urlRef = useRef<string | null>(null);
 
-  const { width, height } = dimensions[variant];
+  const project = useMemo(() => createExportFixtureProject(variant), [variant]);
+  const scene = project.scenes[0];
   const selected = useMemo(
     () =>
       codecOptions.find((option) => option.id === selectedCodec) ??
@@ -131,8 +133,8 @@ export default function ExportLabPage() {
               container: option.container,
               videoCodec: option.videoCodec,
               audioCodec: option.audioCodec,
-              width,
-              height,
+              width: project.canvas.width,
+              height: project.canvas.height,
               outputTarget: "arraybuffer",
             });
             entries[option.id] = {
@@ -175,7 +177,7 @@ export default function ExportLabPage() {
     return () => {
       cancelled = true;
     };
-  }, [width, height]);
+  }, [project.canvas.height, project.canvas.width]);
 
   useEffect(() => {
     return () => {
@@ -194,6 +196,7 @@ export default function ExportLabPage() {
   }
 
   async function render() {
+    if (!scene) return;
     clearResult();
     setError(null);
     setProgress(0);
@@ -202,32 +205,19 @@ export default function ExportLabPage() {
     controllerRef.current = controller;
     const started = performance.now();
     try {
-      const { renderMediaOnWeb } = await import("@remotion/web-renderer");
-      const renderResult = await renderMediaOnWeb({
-        composition: {
-          id: "chessforge-r0-export-proof",
-          component: ExportPocComposition,
-          width,
-          height,
-          fps: FPS,
-          durationInFrames: DURATION_IN_FRAMES,
-          calculateMetadata: null,
-        },
+      const result = await exportProject({
+        project,
         container: selected.container,
         videoCodec: selected.videoCodec,
         audioCodec: selected.audioCodec,
-        outputTarget: "arraybuffer",
-        licenseKey: "free-license",
         signal: controller.signal,
-        onProgress: (nextProgress) => {
-          setProgress(Math.round(nextProgress.progress * 100));
-        },
+        onProgress: (nextProgress) =>
+          setProgress(Math.round(nextProgress * 100)),
       });
-      const blob = await renderResult.getBlob();
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(result.blob);
       urlRef.current = url;
       setResultUrl(url);
-      setResultSize(blob.size);
+      setResultSize(result.blob.size);
       setRenderMs(Math.round(performance.now() - started));
       setProgress(100);
       setStatus("done");
@@ -260,13 +250,13 @@ export default function ExportLabPage() {
     <div className="space-y-6">
       <PageHeader
         title="Export lab"
-        description="Gate G1 proof. Render a five-second chess scene with a legal move, audio, and a real output file. This is not the final export interface."
+        description="Render proof. A three-second chess scene with a legal move, audio, and a real output file. This is not the final export interface."
         actions={
           <Badge
             variant="outline"
             className="h-9 border-border/80 px-3 text-[11px]"
           >
-            R0 proof
+            R0/R1 proof
           </Badge>
         }
       />
@@ -279,8 +269,9 @@ export default function ExportLabPage() {
               Composition preview
             </CardTitle>
             <CardDescription>
-              Remotion Player preview at {width} x {height}. The same component
-              is passed to the web renderer.
+              Remotion Player preview at {project.canvas.width} x{" "}
+              {project.canvas.height}. The same project is passed to the web
+              renderer.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -288,21 +279,28 @@ export default function ExportLabPage() {
               className="mx-auto w-full overflow-hidden rounded-xl border border-border/80 bg-black"
               style={{ maxWidth: variant === "portrait" ? 420 : 760 }}
             >
-              <Player
-                component={ExportPocComposition}
-                durationInFrames={DURATION_IN_FRAMES}
-                compositionWidth={width}
-                compositionHeight={height}
-                fps={FPS}
-                controls
-                loop
-                acknowledgeRemotionLicense
-                style={{ width: "100%", aspectRatio: `${width} / ${height}` }}
-              />
+              {scene ? (
+                <Player
+                  component={ScenePlayer}
+                  inputProps={{ project, scene }}
+                  durationInFrames={scene.durationInFrames}
+                  compositionWidth={project.canvas.width}
+                  compositionHeight={project.canvas.height}
+                  fps={project.frameRate}
+                  controls
+                  loop
+                  autoPlay
+                  acknowledgeRemotionLicense
+                  style={{
+                    width: "100%",
+                    aspectRatio: `${project.canvas.width} / ${project.canvas.height}`,
+                  }}
+                />
+              ) : null}
             </div>
             <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-              The proof scene animates 1. e4 on a local SVG board, adds a title,
-              and plays a generated CC0 move sound.
+              The proof scene animates 1. e4 on a local SVG board, adds a move
+              label, and plays a generated CC0 move sound.
             </p>
           </CardContent>
         </Card>
@@ -325,7 +323,9 @@ export default function ExportLabPage() {
                 </label>
                 <Select
                   value={variant}
-                  onValueChange={(value) => setVariant(value as Variant)}
+                  onValueChange={(value) =>
+                    setVariant(value as ExportFixtureVariant)
+                  }
                 >
                   <SelectTrigger id="export-variant" className="h-10 w-full">
                     <SelectValue />
@@ -468,7 +468,7 @@ export default function ExportLabPage() {
                   <Button asChild className="mt-3 h-9 px-3">
                     <a
                       href={resultUrl}
-                      download={`chessforge-r0-export.${selected.extension}`}
+                      download={`chessforge-r1-export.${selected.extension}`}
                     >
                       <Download aria-hidden className="size-4" />
                       Download file

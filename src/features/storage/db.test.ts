@@ -5,10 +5,12 @@ import {
   closeChessForgeDatabase,
   createAssetRepository,
   createGameRepository,
+  createProjectRepository,
   createSettingsRepository,
   deleteChessForgeDatabase,
   openChessForgeDatabase,
 } from "@/features/storage/db";
+import { createWalkingSkeletonProject } from "@/features/studio/project-factory";
 
 const PGN = `[Event "Storage test"]
 [White "White"]
@@ -47,6 +49,20 @@ describe("IndexedDB repositories", () => {
     const repository = createSettingsRepository(db);
     await repository.save(DEFAULT_SETTINGS);
     expect(await repository.get()).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it("round trips a project with its game snapshot", async () => {
+    const db = await openChessForgeDatabase();
+    const game = parseSinglePgn(PGN);
+    const project = createWalkingSkeletonProject({ game, selectedPly: 1 });
+    const repository = createProjectRepository(db);
+
+    await repository.save(project);
+    const stored = await repository.getById(project.id);
+
+    expect(stored?.id).toBe(project.id);
+    expect(stored?.gameSnapshot?.moves).toHaveLength(game.moves.length);
+    expect(stored?.scenes[0]?.durationInFrames).toBe(90);
   });
 
   it("deduplicates assets by hash lookup", async () => {
