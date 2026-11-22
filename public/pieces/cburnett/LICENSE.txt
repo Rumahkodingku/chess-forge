@@ -1,0 +1,10 @@
+cburnett chess pieces
+=====================
+
+Author: Colin M.L. Burnett
+Licence: Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
+Source: https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces
+Retrieved from the Lichess cburnett piece set.
+
+The SVG files in this directory are distributed under CC BY-SA 3.0.
+Attribution must be preserved when the assets are redistributed.

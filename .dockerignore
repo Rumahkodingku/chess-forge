@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.gitignore
+.superpowers
+coverage
+playwright-report
+test-results
+docs
+e2e
+*.log
+.env*

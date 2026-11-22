@@ -5,7 +5,7 @@ spec_version: "1.0"
 roadmap_version: "1.0"
 prd_version: "1.0"
 prd_revision: "1.1"
-status: Ready for implementation
+status: Gate-verified
 last_updated: 2026-11-22
 language: en
 ---
@@ -1216,54 +1216,54 @@ Each ADR includes:
 
 ### 18.1 G0 checklist
 
-- [ ] `npm run lint` passes.
-- [ ] `npm run typecheck` passes.
-- [ ] `npm run test` passes.
-- [ ] `npm run build` passes.
-- [ ] Shell screenshots captured.
+- [x] `npm run lint` passes.
+- [x] `npm run typecheck` passes.
+- [x] `npm run test` passes.
+- [x] `npm run build` passes.
+- [x] Shell screenshots captured.
 
 ### 18.2 G1 checklist
 
-- [ ] 9:16 export passes.
-- [ ] 16:9 export passes.
-- [ ] WebM produced.
-- [ ] MP4 produced where supported.
-- [ ] Audio present.
-- [ ] Cancel test passes.
-- [ ] Capability matrix recorded.
-- [ ] Render time recorded.
-- [ ] Memory recorded.
+- [x] 9:16 export passes.
+- [x] 16:9 export passes.
+- [x] WebM produced.
+- [x] MP4 produced where supported.
+- [x] Audio present.
+- [x] Cancel test passes.
+- [x] Capability matrix recorded.
+- [x] Render time recorded.
+- [x] Memory recorded.
 
 ### 18.3 G2 checklist
 
-- [ ] Worker loads in production build.
-- [ ] MultiPV >= 3.
-- [ ] Mate score distinguished.
-- [ ] Stop works.
-- [ ] Main thread responsive.
-- [ ] Cache key tested.
+- [x] Worker loads in production build.
+- [x] MultiPV >= 3.
+- [x] Mate score distinguished.
+- [x] Stop works.
+- [x] Main thread responsive.
+- [x] Cache key tested.
 
 ### 18.4 G3 checklist
 
-- [ ] Normal game passes.
-- [ ] Comments, NAGs, variations pass.
-- [ ] Non-standard FEN passes.
-- [ ] Multiple games pass.
-- [ ] Invalid SAN fails clearly.
-- [ ] Empty file fails clearly.
-- [ ] Unsupported variant fails clearly.
-- [ ] Long game performance recorded.
+- [x] Normal game passes.
+- [x] Comments, NAGs, variations pass.
+- [x] Non-standard FEN passes.
+- [x] Multiple games pass.
+- [x] Invalid SAN fails clearly.
+- [x] Empty file fails clearly.
+- [x] Unsupported variant fails clearly.
+- [x] Long game performance recorded.
 
 ### 18.5 G4 checklist
 
-- [ ] Docker build succeeds.
-- [ ] Container smoke passes.
-- [ ] Healthcheck passes.
-- [ ] Coolify docs complete.
-- [ ] Basic auth documented.
-- [ ] Rate limit tested.
-- [ ] Licence inventory complete.
-- [ ] Source offer available.
+- [x] Docker build succeeds.
+- [x] Container smoke passes.
+- [x] Healthcheck passes.
+- [x] Coolify docs complete.
+- [x] Basic auth documented.
+- [x] Rate limit tested.
+- [x] Licence inventory complete.
+- [x] Source offer available.
 
 ---
 
@@ -1305,6 +1305,22 @@ R0 is complete when:
 - ADRs are committed.
 - No unrelated complexity was introduced.
 - R1 can begin without unresolved technical blockers.
+
+---
+
+## 22. R0 execution record
+
+- Execution date: 2026-11-22
+- Gates: G0 PASS, G1 PASS, G2 PASS, G3 PASS, G4 PASS for local build
+- Unit tests: 17 passing
+- Playwright tests: 6 passing
+- Export proof: MP4 1080x1920 and WebM 1920x1080, both with audio
+- Engine proof: Stockfish 19 Lite WASM, MultiPV 3, mate detection, stop
+- PGN proof: standard, rich, FEN, multi-game, invalid, variant, and 200-ply fixtures
+- Deployment: Docker image builds, container healthcheck reaches healthy
+- Live Coolify basic auth: pending an available Coolify instance and domain
+
+Evidence: `docs/evidence/R0/`.
 
 ---
 

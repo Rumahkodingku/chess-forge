@@ -254,6 +254,8 @@ VideoProject -> Remotion composition -> browser export -> downloadable file
 
 ### 5.1 Milestones
 
+**Execution status (2026-11-22):** gates G0–G4 passed in the local build. Evidence is in `docs/evidence/R0/`. Live Coolify basic auth remains a deployment step.
+
 - M0.1 Toolchain and documentation baseline
 - M0.2 Design system and application shell
 - M0.3 Domain model and storage foundation
