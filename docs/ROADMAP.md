@@ -339,6 +339,10 @@ VideoProject -> Remotion composition -> browser export -> downloadable file
 
 **PRD mapping:** PH-1; AC-01, AC-02, AC-03.
 
+**Spec:** `docs/specs/R2-game-import-and-replay.md`.
+
+**Execution status:** Specification ready. Implementation has not started.
+
 **Goal:** Complete game import, validation, source integration, and board replay.
 
 **Entry criteria:** Gate G5 passes.
