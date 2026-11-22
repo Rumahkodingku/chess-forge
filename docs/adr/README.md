@@ -12,5 +12,7 @@
 | [0008](0008-design-tokens.md) | Dark-first design tokens |
 | [0009](0009-external-import-adapters.md) | Chess.com and Lichess proxies |
 | [0010](0010-testing-and-ci.md) | Vitest, Playwright, and CI |
+| [0011](0011-project-game-snapshot.md) | Project game snapshot |
+| [0012](0012-production-e2e-gate.md) | Production E2E gate |
 
 Add a new ADR before changing an accepted decision. Keep the status line current.

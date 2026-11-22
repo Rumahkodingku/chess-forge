@@ -308,6 +308,10 @@ VideoProject -> Remotion composition -> browser export -> downloadable file
 
 **PRD mapping:** New phase; supports PH-1 through PH-5.
 
+**Spec:** `docs/specs/R1-walking-skeleton.md`.
+
+**Execution status (2026-11-22):** Gate G5 passed. Evidence is in `docs/evidence/R1/`. The R1 walking skeleton imports, replays, analyses, forges, exports, saves, reloads, and reopens locally.
+
 **Goal:** Prove the end-to-end workflow with a thin, low-fidelity implementation.
 
 **Entry criteria:** Gates G0–G4 pass.

@@ -3,6 +3,7 @@ import {
   analysisCacheKey,
   assertValidFen,
   formatEvaluation,
+  isBestMoveLine,
   normalizeScore,
   parseBestMove,
   parseUciInfo,
@@ -44,6 +45,8 @@ describe("UCI helpers", () => {
   it("parses bestmove and UCI move strings", () => {
     expect(parseBestMove("bestmove e2e4 ponder e7e5")).toBe("e2e4");
     expect(parseBestMove("bestmove (none)")).toBeNull();
+    expect(isBestMoveLine("bestmove (none)")).toBe(true);
+    expect(isBestMoveLine("info depth 12")).toBe(false);
     expect(parseUciMove("e7e8q")).toEqual({
       from: "e7",
       to: "e8",

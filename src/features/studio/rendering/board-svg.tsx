@@ -26,6 +26,7 @@ interface BoardSvgProps {
   lastMove?: string;
   checkSquare?: string;
   animation?: BoardMoveAnimation;
+  hideSquare?: string;
   className?: string;
   coordinates?: boolean;
   label?: string;
@@ -50,6 +51,7 @@ export function BoardSvg({
   lastMove,
   checkSquare,
   animation,
+  hideSquare,
   className,
   coordinates = false,
   label = "Chess position",
@@ -67,7 +69,7 @@ export function BoardSvg({
     return new Set([lastMove.slice(0, 2), lastMove.slice(2, 4)]);
   }, [lastMove]);
 
-  const hiddenSquare = animation ? animation.to : undefined;
+  const hiddenSquare = hideSquare ?? (animation ? animation.to : undefined);
   const moving = animation
     ? squareToGrid(animation.from, orientation)
     : undefined;

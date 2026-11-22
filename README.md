@@ -2,7 +2,7 @@
 
 ChessForge is a single-user, local-first chess analysis and video creation studio. It is built with Next.js, runs Stockfish in the browser, and is designed to export chess videos without a cloud rendering service.
 
-**Current status:** Phase R0 verified locally. Gates G0–G4 pass, including a real MP4 and WebM export, Stockfish in a worker, PGN fixtures, and a healthy Docker container. Live Coolify basic auth is the remaining deployment step.
+**Current status:** Phase R1 walking skeleton verified. Gates G0–G5 pass locally. The app imports a PGN, replays it, analyses a position, creates a 3-second scene, previews and exports WebM, saves the project, and reopens it after reload. R2 adds Chessground, file upload, and external sources.
 
 ## Requirements
 
@@ -30,8 +30,18 @@ Open http://localhost:3000.
 | `npm run typecheck` | TypeScript strict check |
 | `npm run test` | Vitest unit and integration tests |
 | `npm run test:e2e` | Playwright browser smoke tests |
+| `npm run test:e2e:prod` | Production walking skeleton E2E |
 | `npm run validate:video` | Validate an exported file with `ffprobe` |
 | `npm run check:all` | Lint, typecheck, unit tests, and build |
+
+## R1 walking skeleton
+
+- `/analysis` imports one pasted PGN or the built-in fixture.
+- `/analysis/[gameId]` replays moves and analyses the position before the selected move.
+- `/studio` lists saved projects.
+- `/studio/[projectId]` previews, saves, and exports one 3-second scene.
+
+The project stores a game snapshot, so it remains renderable after the source game is removed.
 
 ## R0 technical labs
 

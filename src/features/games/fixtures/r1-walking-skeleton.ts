@@ -1,0 +1,10 @@
+export const R1_FIXTURE_PGN = `[Event "R1 walking skeleton fixture"]
+[Site "local"]
+[Date "2024.01.01"]
+[Round "1"]
+[White "White"]
+[Black "Black"]
+[Result "*"]
+[TimeControl "300+0"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 *`;

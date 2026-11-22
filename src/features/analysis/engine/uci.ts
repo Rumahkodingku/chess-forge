@@ -78,6 +78,10 @@ export function parseUciInfo(line: string, fen: string): UciInfo | null {
   return info;
 }
 
+export function isBestMoveLine(line: string): boolean {
+  return line.startsWith("bestmove ");
+}
+
 export function parseBestMove(line: string): string | null {
   if (!line.startsWith("bestmove ")) return null;
   const [, move] = line.split(/\s+/);
