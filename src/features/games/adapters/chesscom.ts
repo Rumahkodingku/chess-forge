@@ -82,6 +82,52 @@ export interface ChessComConversion {
   warnings: string[];
 }
 
+export interface ChessComGameSummary {
+  url: string;
+  uuid?: string;
+  rules: string;
+  pgn: string;
+  white: { username: string; result?: string };
+  black: { username: string; result?: string };
+  timeClass?: string;
+  endTime?: number;
+}
+
+export interface ChessComSummaryResult {
+  summaries: ChessComGameSummary[];
+  warnings: string[];
+}
+
+export function summarizeChessComGames(
+  games: ChessComGame[],
+): ChessComSummaryResult {
+  const summaries: ChessComGameSummary[] = [];
+  const warnings: string[] = [];
+
+  for (const game of games) {
+    if (game.rules !== "chess" || !game.pgn) {
+      if (game.rules !== "chess") {
+        warnings.push(
+          `Skipped ${game.rules} game at ${game.url}. ChessForge imports standard chess only.`,
+        );
+      }
+      continue;
+    }
+    summaries.push({
+      url: game.url,
+      uuid: game.uuid,
+      rules: game.rules,
+      pgn: game.pgn,
+      white: { username: game.white.username, result: game.white.result },
+      black: { username: game.black.username, result: game.black.result },
+      timeClass: game.time_class,
+      endTime: game.end_time,
+    });
+  }
+
+  return { summaries, warnings };
+}
+
 export function convertChessComGames(
   games: ChessComGame[],
 ): ChessComConversion {

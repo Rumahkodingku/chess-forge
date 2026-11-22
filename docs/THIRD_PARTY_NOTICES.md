@@ -18,6 +18,7 @@ ChessForge is a local-first, single-user application. This file records the thir
 | Zod                    | 4.6.7               | MIT              | https://github.com/colinhacks/zod           |
 | idb                    | 8.0.4               | ISC              | https://github.com/jakearchibald/idb        |
 | chess.js               | 1.4.0               | BSD-2-Clause     | https://github.com/jhlywa/chess.js          |
+| chessground            | 9.2.1               | GPL-3.0-or-later | https://github.com/lichess-org/chessground  |
 | @mliebelt/pgn-parser   | 1.4.19              | Apache-2.0       | https://github.com/mliebelt/pgn-parser      |
 | stockfish (npm)        | 19.0.1              | GPL-3.0          | https://github.com/nmrugg/stockfish.js      |
 | Remotion               | 4.0.545             | Remotion Licence | https://github.com/remotion-dev/remotion    |
@@ -59,7 +60,9 @@ Anyone who receives a build of ChessForge that includes Stockfish is entitled to
 
 ### Chessground
 
-Chessground is GPL-3.0-or-later. R0 does not ship Chessground yet. R2 will introduce it for the interactive analysis board. Before distribution beyond the single-user owner, review the GPL implications for the combined work.
+Chessground 9.2.1 is distributed under GPL-3.0-or-later. ChessForge uses it for the read-only replay board. The board is client-only and bundled with the application. The corresponding source is available at https://github.com/lichess-org/chessground.
+
+Before distributing a build beyond the single-user owner, review the GPL implications for the combined work. Keep this notice with the distributed build.
 
 ### Remotion
 

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "chessground/assets/chessground.base.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -245,4 +246,99 @@
 html[data-motion="reduced"] .enter-up,
 html[data-motion="reduced"] .enter-fade {
   animation: none;
+}
+
+.cg-wrap {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.cg-replay cg-board {
+  cursor: default;
+}
+
+.cg-wrap piece.pawn.white {
+  background-image: url("/pieces/cburnett/wP.svg");
+}
+.cg-wrap piece.knight.white {
+  background-image: url("/pieces/cburnett/wN.svg");
+}
+.cg-wrap piece.bishop.white {
+  background-image: url("/pieces/cburnett/wB.svg");
+}
+.cg-wrap piece.rook.white {
+  background-image: url("/pieces/cburnett/wR.svg");
+}
+.cg-wrap piece.queen.white {
+  background-image: url("/pieces/cburnett/wQ.svg");
+}
+.cg-wrap piece.king.white {
+  background-image: url("/pieces/cburnett/wK.svg");
+}
+.cg-wrap piece.pawn.black {
+  background-image: url("/pieces/cburnett/bP.svg");
+}
+.cg-wrap piece.knight.black {
+  background-image: url("/pieces/cburnett/bN.svg");
+}
+.cg-wrap piece.bishop.black {
+  background-image: url("/pieces/cburnett/bB.svg");
+}
+.cg-wrap piece.rook.black {
+  background-image: url("/pieces/cburnett/bR.svg");
+}
+.cg-wrap piece.queen.black {
+  background-image: url("/pieces/cburnett/bQ.svg");
+}
+.cg-wrap piece.king.black {
+  background-image: url("/pieces/cburnett/bK.svg");
+}
+
+.cg-theme-forge cg-board {
+  background-color: #c9b28a;
+  background-image: conic-gradient(
+    #5f4b39 25%,
+    #c9b28a 0 50%,
+    #5f4b39 0 75%,
+    #c9b28a 0
+  );
+  background-size: 25% 25%;
+}
+
+.cg-theme-classic cg-board {
+  background-color: #f0d9b5;
+  background-image: conic-gradient(
+    #b58863 25%,
+    #f0d9b5 0 50%,
+    #b58863 0 75%,
+    #f0d9b5 0
+  );
+  background-size: 25% 25%;
+}
+
+.cg-theme-forge cg-board square.last-move,
+.cg-theme-classic cg-board square.last-move {
+  background-color: rgba(232, 180, 90, 0.35);
+}
+
+.cg-theme-forge cg-board square.check,
+.cg-theme-classic cg-board square.check {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(248, 113, 113, 0.95) 0%,
+    rgba(248, 113, 113, 0.55) 28%,
+    rgba(248, 113, 113, 0) 72%
+  );
+}
+
+.cg-wrap coords coord {
+  color: rgba(255, 255, 255, 0.95);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  text-shadow:
+    0 0 2px rgba(0, 0, 0, 0.9),
+    0 1px 1px rgba(0, 0, 0, 0.8);
 }

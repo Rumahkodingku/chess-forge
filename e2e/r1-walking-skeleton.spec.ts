@@ -8,9 +8,12 @@ test("R1 walking skeleton imports, analyses, forges, exports, and reopens", asyn
 
   await page.goto("/analysis");
   await page.getByRole("button", { name: "Use fixture" }).click();
-  await page.getByRole("button", { name: "Import game" }).click();
+  await page.getByRole("button", { name: "Parse PGN" }).click();
+  await page.getByRole("button", { name: "Confirm import" }).click();
   await page.waitForURL(/\/analysis\/[0-9a-f-]{36}$/);
-  await expect(page.getByText("White vs Black")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "White vs Black" }),
+  ).toBeVisible();
 
   // Replay five plies with the next control, then exercise arrows and
   // first/previous/next/last before analysing.

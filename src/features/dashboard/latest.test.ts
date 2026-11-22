@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { latestByUpdatedAt } from "@/features/dashboard/latest";
+import {
+  latestByUpdatedAt,
+  recentByUpdatedAt,
+} from "@/features/dashboard/latest";
 
 describe("latestByUpdatedAt", () => {
   it("returns the most recently updated record", () => {
@@ -12,5 +15,17 @@ describe("latestByUpdatedAt", () => {
 
   it("returns undefined for an empty list", () => {
     expect(latestByUpdatedAt([])).toBeUndefined();
+  });
+});
+
+describe("recentByUpdatedAt", () => {
+  it("sorts newest first and caps the list", () => {
+    const items = Array.from({ length: 7 }, (_, index) => ({
+      id: index,
+      updatedAt: `2024-01-0${index + 1}T00:00:00.000Z`,
+    }));
+    expect(recentByUpdatedAt(items, 5).map((item) => item.id)).toEqual([
+      6, 5, 4, 3, 2,
+    ]);
   });
 });

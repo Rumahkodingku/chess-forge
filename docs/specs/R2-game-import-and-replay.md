@@ -5,7 +5,7 @@ spec_version: "1.0"
 roadmap_version: "1.0"
 prd_version: "1.0"
 prd_revision: "1.1"
-status: Ready for implementation
+status: Implemented
 last_updated: 2026-11-22
 language: en
 ---
