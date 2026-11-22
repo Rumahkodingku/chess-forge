@@ -308,6 +308,10 @@ VideoProject -> Remotion composition -> browser export -> downloadable file
 
 **PRD mapping:** New phase; supports PH-1 through PH-5.
 
+**Spec:** `docs/specs/R1-walking-skeleton.md`.
+
+**Execution status:** Specification ready. Implementation has not started.
+
 **Goal:** Prove the end-to-end workflow with a thin, low-fidelity implementation.
 
 **Entry criteria:** Gates G0–G4 pass.
