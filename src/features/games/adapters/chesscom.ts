@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { parsePgn } from "@/features/games/pgn";
 import type { Game } from "@/features/games/types";
-import { fetchWithTimeout, HttpError } from "@/lib/http";
+import { cachedFetch, HttpError } from "@/lib/http";
 
 const archivesResponseSchema = z.object({
   archives: z.array(z.string().url()),
@@ -43,7 +43,7 @@ export type ChessComGame = z.infer<typeof chessComGameSchema>;
 export async function fetchChessComArchives(
   username: string,
 ): Promise<string[]> {
-  const response = await fetchWithTimeout(
+  const response = await cachedFetch(
     `https://api.chess.com/pub/player/${encodeURIComponent(username)}/games/archives`,
     { headers: { Accept: "application/json" } },
   );
@@ -63,7 +63,7 @@ export async function fetchChessComGames(
   month: number,
 ): Promise<ChessComGame[]> {
   const paddedMonth = String(month).padStart(2, "0");
-  const response = await fetchWithTimeout(
+  const response = await cachedFetch(
     `https://api.chess.com/pub/player/${encodeURIComponent(username)}/games/${year}/${paddedMonth}`,
     { headers: { Accept: "application/json" } },
   );
@@ -77,14 +77,29 @@ export async function fetchChessComGames(
   return gamesResponseSchema.parse(json).games;
 }
 
-export function convertChessComGames(games: ChessComGame[]): Game[] {
-  return games
-    .filter((game) => game.rules === "chess" && Boolean(game.pgn))
-    .flatMap((game) => {
-      try {
-        return parsePgn(game.pgn ?? "", "chesscom", game.url).games;
-      } catch {
-        return [];
-      }
-    });
+export interface ChessComConversion {
+  games: Game[];
+  warnings: string[];
+}
+
+export function convertChessComGames(
+  games: ChessComGame[],
+): ChessComConversion {
+  const converted: Game[] = [];
+  const warnings: string[] = [];
+
+  for (const game of games) {
+    if (game.rules !== "chess" || !game.pgn) continue;
+    try {
+      converted.push(...parsePgn(game.pgn, "chesscom", game.url).games);
+    } catch (error) {
+      warnings.push(
+        `Chess.com game ${game.url}: ${
+          error instanceof Error ? error.message : "could not be parsed"
+        }`,
+      );
+    }
+  }
+
+  return { games: converted, warnings };
 }

@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { applyMotionPreference } from "@/features/settings/motion-preference";
 import {
   type ApplicationSettings,
   ASPECT_PRESETS,
@@ -150,6 +151,7 @@ export function SettingsWorkspace() {
       const db = await openChessForgeDatabase();
       await createSettingsRepository(db).save(parsed);
       setSettings(parsed);
+      applyMotionPreference(parsed);
       setSaveState("saved");
       toast.success("Settings saved to this device.");
       window.setTimeout(() => setSaveState("idle"), 1800);

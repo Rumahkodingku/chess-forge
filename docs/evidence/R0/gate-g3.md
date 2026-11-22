@@ -21,7 +21,7 @@ PGN fixtures parse into the internal game model, and invalid input fails with a 
 
 ## Automated tests
 
-`npm run test` reports 17 passing tests across 5 files. PGN and adapter coverage includes:
+`npm run test` reports 22 passing tests across 7 files. PGN and adapter coverage includes:
 
 - `src/features/games/pgn.test.ts`
 - `src/features/games/adapters/chesscom.test.ts`

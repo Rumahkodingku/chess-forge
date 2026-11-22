@@ -32,5 +32,22 @@
     },
     "end_time": 1704067200,
     "uuid": "r0-variant"
+  },
+  {
+    "url": "https://www.chess.com/game/live/r0-invalid",
+    "pgn": "[Event \"R0 invalid fixture\"]\n[White \"White\"]\n[Black \"Black\"]\n[Result \"*\"]\n\n1. e4 Qh9 *",
+    "rules": "chess",
+    "white": {
+      "username": "White",
+      "result": "win",
+      "rating": 1500
+    },
+    "black": {
+      "username": "Black",
+      "result": "checkmated",
+      "rating": 1490
+    },
+    "end_time": 1704067200,
+    "uuid": "r0-invalid"
   }
 ]

@@ -241,3 +241,8 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+html[data-motion="reduced"] .enter-up,
+html[data-motion="reduced"] .enter-fade {
+  animation: none;
+}

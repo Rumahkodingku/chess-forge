@@ -296,6 +296,7 @@ export default function ExportLabPage() {
                 fps={FPS}
                 controls
                 loop
+                acknowledgeRemotionLicense
                 style={{ width: "100%", aspectRatio: `${width} / ${height}` }}
               />
             </div>

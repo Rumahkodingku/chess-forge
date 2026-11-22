@@ -1312,7 +1312,7 @@ R0 is complete when:
 
 - Execution date: 2026-11-22
 - Gates: G0 PASS, G1 PASS, G2 PASS, G3 PASS, G4 PASS for local build
-- Unit tests: 17 passing
+- Unit tests: 22 passing
 - Playwright tests: 6 passing
 - Export proof: MP4 1080x1920 and WebM 1920x1080, both with audio
 - Engine proof: Stockfish 19 Lite WASM, MultiPV 3, mate detection, stop

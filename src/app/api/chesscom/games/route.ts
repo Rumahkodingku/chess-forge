@@ -35,9 +35,12 @@ export async function GET(request: Request) {
       query.year,
       query.month,
     );
+    const conversion = convertChessComGames(games);
     return NextResponse.json({
-      games: convertChessComGames(games),
+      games: conversion.games,
       total: games.length,
+      converted: conversion.games.length,
+      warnings: conversion.warnings,
     });
   } catch (error) {
     return errorResponse(error);

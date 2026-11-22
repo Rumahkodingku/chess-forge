@@ -68,4 +68,11 @@ describe("IndexedDB repositories", () => {
       hash: "test-hash",
     });
   });
+
+  it("rejects schema drift when reading a stored game", async () => {
+    const db = await openChessForgeDatabase();
+    const repository = createGameRepository(db);
+    await db.put("games", { id: "broken" } as never);
+    await expect(repository.getById("broken")).rejects.toThrow();
+  });
 });

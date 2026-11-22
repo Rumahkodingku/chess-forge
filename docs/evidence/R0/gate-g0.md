@@ -10,7 +10,7 @@
 | --- | --- |
 | `npm run lint` | Exit 0. 4 warnings, all `!important` in the reduced-motion block. No errors. |
 | `npm run typecheck` | Exit 0. |
-| `npm run test` | 17 tests passed, 5 files. |
+| `npm run test` | 22 tests passed, 7 files. |
 | `npm run build` | Exit 0. 16 routes generated. API routes dynamic. |
 | `npm run test:e2e` | 6 Playwright tests passed. |
 

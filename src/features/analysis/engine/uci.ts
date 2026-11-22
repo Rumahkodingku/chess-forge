@@ -1,4 +1,6 @@
+import { Chess } from "chess.js";
 import type { Evaluation } from "@/features/analysis/types";
+import { ValidationError } from "@/lib/errors";
 
 export interface UciInfo {
   depth?: number;
@@ -12,6 +14,17 @@ export interface UciInfo {
 
 function sideToMove(fen: string): "w" | "b" {
   return fen.split(" ")[1] === "b" ? "b" : "w";
+}
+
+export function assertValidFen(fen: string): void {
+  try {
+    new Chess(fen);
+  } catch {
+    throw new ValidationError(
+      "The position FEN is invalid.",
+      "Check the FEN and analyse again.",
+    );
+  }
 }
 
 export function normalizeScore(
@@ -100,10 +113,14 @@ export function analysisCacheKey(input: {
   threads: number;
   hashMb: number;
 }): string {
+  const limit =
+    input.movetimeMs !== undefined
+      ? `t${input.movetimeMs}`
+      : `d${input.depth ?? 0}`;
   return [
     input.engineVersion,
     input.fen,
-    input.depth ?? `t${input.movetimeMs ?? 0}`,
+    limit,
     input.multiPv,
     input.threads,
     input.hashMb,

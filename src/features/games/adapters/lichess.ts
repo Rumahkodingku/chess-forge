@@ -1,12 +1,12 @@
 import { parsePgn } from "@/features/games/pgn";
 import type { Game } from "@/features/games/types";
-import { fetchWithTimeout, HttpError } from "@/lib/http";
+import { cachedFetch, HttpError } from "@/lib/http";
 
 export async function fetchLichessGames(
   username: string,
   max = 20,
 ): Promise<Game[]> {
-  const response = await fetchWithTimeout(
+  const response = await cachedFetch(
     `https://lichess.org/api/games/user/${encodeURIComponent(username)}?max=${Math.min(Math.max(max, 1), 50)}`,
     {
       headers: {
@@ -25,7 +25,7 @@ export async function fetchLichessGames(
 }
 
 export async function fetchLichessGame(gameId: string): Promise<Game> {
-  const response = await fetchWithTimeout(
+  const response = await cachedFetch(
     `https://lichess.org/game/export/${encodeURIComponent(gameId)}`,
     {
       headers: {

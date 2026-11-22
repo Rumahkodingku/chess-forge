@@ -2,7 +2,7 @@
 
 - Date: 2026-11-22
 - Environment: Docker 29.9.3, Linux
-- Status: PASS for local build, live Coolify deployment pending access
+- Status: PASS (local build), BLOCKED (live Coolify basic auth)
 
 ## Docker
 

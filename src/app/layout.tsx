@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { MotionPreferenceProvider } from "@/features/settings/motion-preference-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,11 +31,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-motion="full"
       className={`dark ${geistSans.variable} ${geistMono.variable}`}
     >
       <body className="min-h-dvh bg-background font-sans text-foreground">
         <TooltipProvider delayDuration={180}>{children}</TooltipProvider>
         <Toaster position="bottom-right" />
+        <MotionPreferenceProvider />
       </body>
     </html>
   );

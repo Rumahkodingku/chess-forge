@@ -1,16 +1,25 @@
 import { type DBSchema, type IDBPDatabase, openDB } from "idb";
+import { z } from "zod";
 import type {
   MoveAssessment,
   PositionAnalysis,
 } from "@/features/analysis/types";
-import type { Game } from "@/features/games/types";
-import type { ApplicationSettings } from "@/features/settings/types";
-import type { Scene, VideoProject } from "@/features/studio/scene/scene.types";
-import type { Template } from "@/features/templates/types";
+import { type Game, gameSchema } from "@/features/games/types";
+import {
+  type ApplicationSettings,
+  applicationSettingsSchema,
+} from "@/features/settings/types";
+import {
+  type Scene,
+  type VideoProject,
+  videoProjectSchema,
+} from "@/features/studio/scene/scene.types";
+import { type Template, templateSchema } from "@/features/templates/types";
 import {
   StorageMigrationError,
   StorageQuotaError,
   StorageUnavailableError,
+  ValidationError,
 } from "@/lib/errors";
 
 export const DB_NAME = "chessforge";
@@ -29,6 +38,41 @@ export interface AssetRecord {
 export interface KeyValueRecord<T = unknown> {
   key: string;
   value: T;
+}
+
+const assetRecordSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["audio", "image"]),
+  mimeType: z.string().min(1),
+  size: z.number().int().nonnegative(),
+  hash: z.string().min(1),
+  createdAt: z.string().min(1),
+  // Blob identity differs across browser, jsdom, and fake-indexeddb realms.
+  data: z.custom<Blob>((value) => value !== undefined && value !== null),
+});
+
+function parseStored<T>(
+  value: T | undefined,
+  schema: { parse: (input: unknown) => T },
+  label: string,
+): T | undefined {
+  if (value === undefined) return undefined;
+  try {
+    return schema.parse(value);
+  } catch {
+    throw new ValidationError(
+      `Stored ${label} data is invalid.`,
+      "Export a backup, then clear site data before re-importing.",
+    );
+  }
+}
+
+function parseStoredList<T>(
+  values: T[],
+  schema: { parse: (input: unknown) => T },
+  label: string,
+): T[] {
+  return values.map((value) => parseStored(value, schema, label) as T);
 }
 
 interface ChessForgeDB extends DBSchema {
@@ -122,58 +166,77 @@ export async function openChessForgeDatabase(): Promise<ChessForgeDatabase> {
     throw new StorageUnavailableError();
   }
 
-  dbPromise ??= openDB<ChessForgeDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      try {
-        const games = db.createObjectStore("games", { keyPath: "id" });
-        games.createIndex("createdAt", "createdAt");
-        games.createIndex("updatedAt", "updatedAt");
-        games.createIndex("source", "source");
-        games.createIndex("white", "metadata.white");
-        games.createIndex("black", "metadata.black");
+  dbPromise ??= (async () => {
+    const db = await openDB<ChessForgeDB>(DB_NAME, DB_VERSION, {
+      upgrade(database) {
+        try {
+          const games = database.createObjectStore("games", { keyPath: "id" });
+          games.createIndex("createdAt", "createdAt");
+          games.createIndex("updatedAt", "updatedAt");
+          games.createIndex("source", "source");
+          games.createIndex("white", "metadata.white");
+          games.createIndex("black", "metadata.black");
 
-        const analyses = db.createObjectStore("positionAnalyses", {
-          keyPath: "cacheKey",
-        });
-        analyses.createIndex("gameId", "gameId");
-        analyses.createIndex("ply", "ply");
-        analyses.createIndex("fen", "fen");
-        analyses.createIndex("createdAt", "createdAt");
+          const analyses = database.createObjectStore("positionAnalyses", {
+            keyPath: "cacheKey",
+          });
+          analyses.createIndex("gameId", "gameId");
+          analyses.createIndex("ply", "ply");
+          analyses.createIndex("fen", "fen");
+          analyses.createIndex("createdAt", "createdAt");
 
-        const assessments = db.createObjectStore("moveAssessments", {
-          keyPath: "id",
-        });
-        assessments.createIndex("gameId", "gameId");
-        assessments.createIndex("ply", "ply");
+          const assessments = database.createObjectStore("moveAssessments", {
+            keyPath: "id",
+          });
+          assessments.createIndex("gameId", "gameId");
+          assessments.createIndex("ply", "ply");
 
-        const projects = db.createObjectStore("projects", { keyPath: "id" });
-        projects.createIndex("createdAt", "createdAt");
-        projects.createIndex("updatedAt", "updatedAt");
+          const projects = database.createObjectStore("projects", {
+            keyPath: "id",
+          });
+          projects.createIndex("createdAt", "createdAt");
+          projects.createIndex("updatedAt", "updatedAt");
 
-        const templates = db.createObjectStore("templates", { keyPath: "id" });
-        templates.createIndex("updatedAt", "updatedAt");
+          const templates = database.createObjectStore("templates", {
+            keyPath: "id",
+          });
+          templates.createIndex("updatedAt", "updatedAt");
 
-        const assets = db.createObjectStore("assets", { keyPath: "id" });
-        assets.createIndex("hash", "hash");
-        assets.createIndex("mimeType", "mimeType");
-        assets.createIndex("createdAt", "createdAt");
+          const assets = database.createObjectStore("assets", {
+            keyPath: "id",
+          });
+          assets.createIndex("hash", "hash");
+          assets.createIndex("mimeType", "mimeType");
+          assets.createIndex("createdAt", "createdAt");
 
-        db.createObjectStore("settings", { keyPath: "key" });
-        db.createObjectStore("meta", { keyPath: "key" });
-      } catch (error) {
-        throw new StorageMigrationError(
-          error instanceof Error ? error.message : undefined,
-          "Export a backup, then reset local storage.",
-        );
-      }
-    },
-    blocked() {
-      console.warn("ChessForge database upgrade is blocked by another tab.");
-    },
-    blocking() {
-      dbPromise?.then((db) => db.close()).catch(() => undefined);
-    },
-  }).catch((error: unknown) => {
+          database.createObjectStore("settings", { keyPath: "key" });
+          database.createObjectStore("meta", { keyPath: "key" });
+        } catch (error) {
+          throw new StorageMigrationError(
+            error instanceof Error ? error.message : undefined,
+            "Export a backup, then reset local storage.",
+          );
+        }
+      },
+      blocked() {
+        console.warn("ChessForge database upgrade is blocked by another tab.");
+      },
+      blocking() {
+        dbPromise
+          ?.then((database) => {
+            database.close();
+            dbPromise = undefined;
+          })
+          .catch(() => {
+            dbPromise = undefined;
+          });
+      },
+    });
+
+    await db.put("meta", { key: "schemaVersion", value: DB_VERSION });
+    return db;
+  })().catch((error: unknown) => {
+    dbPromise = undefined;
     throw toStorageError(error);
   });
 
@@ -182,9 +245,14 @@ export async function openChessForgeDatabase(): Promise<ChessForgeDatabase> {
 
 export async function closeChessForgeDatabase(): Promise<void> {
   if (!dbPromise) return;
-  const db = await dbPromise;
-  db.close();
-  dbPromise = undefined;
+  try {
+    const db = await dbPromise;
+    db.close();
+  } catch {
+    // A rejected open still needs to release the cached promise.
+  } finally {
+    dbPromise = undefined;
+  }
 }
 
 export async function deleteChessForgeDatabase(): Promise<void> {
@@ -238,10 +306,12 @@ export interface SettingsRepository {
 
 export function createGameRepository(db: ChessForgeDatabase): GameRepository {
   return {
-    getById: (id) => db.get("games", id),
-    list: () => db.getAll("games"),
+    getById: async (id) =>
+      parseStored(await db.get("games", id), gameSchema, "game"),
+    list: async () =>
+      parseStoredList(await db.getAll("games"), gameSchema, "game"),
     save: async (game) => {
-      await db.put("games", game);
+      await db.put("games", gameSchema.parse(game));
     },
     delete: (id) => db.delete("games", id),
   };
@@ -251,10 +321,16 @@ export function createProjectRepository(
   db: ChessForgeDatabase,
 ): ProjectRepository {
   return {
-    getById: (id) => db.get("projects", id),
-    list: () => db.getAll("projects"),
+    getById: async (id) =>
+      parseStored(await db.get("projects", id), videoProjectSchema, "project"),
+    list: async () =>
+      parseStoredList(
+        await db.getAll("projects"),
+        videoProjectSchema,
+        "project",
+      ),
     save: async (project) => {
-      await db.put("projects", project);
+      await db.put("projects", videoProjectSchema.parse(project));
     },
     delete: (id) => db.delete("projects", id),
   };
@@ -264,10 +340,12 @@ export function createTemplateRepository(
   db: ChessForgeDatabase,
 ): TemplateRepository {
   return {
-    getById: (id) => db.get("templates", id),
-    list: () => db.getAll("templates"),
+    getById: async (id) =>
+      parseStored(await db.get("templates", id), templateSchema, "template"),
+    list: async () =>
+      parseStoredList(await db.getAll("templates"), templateSchema, "template"),
     save: async (template) => {
-      await db.put("templates", template);
+      await db.put("templates", templateSchema.parse(template));
     },
     delete: (id) => db.delete("templates", id),
   };
@@ -275,13 +353,16 @@ export function createTemplateRepository(
 
 export function createAssetRepository(db: ChessForgeDatabase): AssetRepository {
   return {
-    getById: (id) => db.get("assets", id),
-    findByHash: async (hash) => {
-      const record = await db.getFromIndex("assets", "hash", hash);
-      return record;
-    },
+    getById: async (id) =>
+      parseStored(await db.get("assets", id), assetRecordSchema, "asset"),
+    findByHash: async (hash) =>
+      parseStored(
+        await db.getFromIndex("assets", "hash", hash),
+        assetRecordSchema,
+        "asset",
+      ),
     save: async (asset) => {
-      await db.put("assets", asset);
+      await db.put("assets", assetRecordSchema.parse(asset));
     },
     delete: (id) => db.delete("assets", id),
   };
@@ -293,10 +374,13 @@ export function createSettingsRepository(
   return {
     get: async () => {
       const record = await db.get("settings", "app");
-      return record?.value;
+      return parseStored(record?.value, applicationSettingsSchema, "settings");
     },
     save: async (settings) => {
-      await db.put("settings", { key: "app", value: settings });
+      await db.put("settings", {
+        key: "app",
+        value: applicationSettingsSchema.parse(settings),
+      });
     },
   };
 }

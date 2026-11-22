@@ -1,5 +1,6 @@
 import {
   analysisCacheKey,
+  assertValidFen,
   parseBestMove,
   parseUciInfo,
 } from "@/features/analysis/engine/uci";
@@ -131,6 +132,7 @@ export class BrowserStockfishEngine implements StockfishEngine {
   }
 
   async analyse(request: AnalyseRequest): Promise<PositionAnalysis> {
+    assertValidFen(request.fen);
     if (!this.worker) {
       await this.load();
     }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   analysisCacheKey,
+  assertValidFen,
   formatEvaluation,
   normalizeScore,
   parseBestMove,
@@ -71,5 +72,32 @@ describe("UCI helpers", () => {
     expect(key).toContain(WHITE_FEN);
     expect(key).toContain("Stockfish 19");
     expect(key.endsWith("|3|1|32")).toBe(true);
+  });
+
+  it("separates a depth search from a movetime search", () => {
+    const depthKey = analysisCacheKey({
+      fen: WHITE_FEN,
+      engineVersion: "Stockfish 19",
+      depth: 14,
+      multiPv: 3,
+      threads: 1,
+      hashMb: 32,
+    });
+    const timeKey = analysisCacheKey({
+      fen: WHITE_FEN,
+      engineVersion: "Stockfish 19",
+      depth: 14,
+      movetimeMs: 2000,
+      multiPv: 3,
+      threads: 1,
+      hashMb: 32,
+    });
+    expect(timeKey).not.toBe(depthKey);
+    expect(timeKey).toContain("t2000");
+  });
+
+  it("rejects an invalid FEN before it reaches the engine", () => {
+    expect(() => assertValidFen("not a fen")).toThrow();
+    expect(() => assertValidFen(WHITE_FEN)).not.toThrow();
   });
 });

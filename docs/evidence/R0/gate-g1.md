@@ -36,7 +36,7 @@ File: `docs/evidence/R0/export-proof-1080x1920.mp4`
 }
 ```
 
-Render time reported by the lab: 11.1 seconds. Output size: 0.54 MB.
+Render time reported by the lab: 11.1 seconds. Output size: 0.54 MB. Peak JS heap used during the render: 38.7 MB. Heap used after completion: 28.8 MB. Total JS heap after completion: 64.1 MB.
 
 ## WebM evidence
 
