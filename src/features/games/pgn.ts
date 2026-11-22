@@ -1,7 +1,12 @@
-import { type ParseTree, parseGames } from "@mliebelt/pgn-parser";
+import { type ParseTree, parse, parseGame, split } from "@mliebelt/pgn-parser";
 import type { PgnMove } from "@mliebelt/pgn-types";
 import { Chess } from "chess.js";
-import { type Game, type GameSource, gameSchema } from "@/features/games/types";
+import {
+  type Game,
+  type GameMetadata,
+  type GameSource,
+  gameSchema,
+} from "@/features/games/types";
 import { ValidationError } from "@/lib/errors";
 import { createId } from "@/lib/id";
 
@@ -27,6 +32,20 @@ export class PgnImportError extends ValidationError {
 export interface PgnParseResult {
   games: Game[];
   warnings: string[];
+}
+
+export interface PgnCandidate {
+  id: string;
+  source: GameSource;
+  sourceReference?: string;
+  pgn: string;
+  metadata: GameMetadata;
+  plyCount: number;
+  warnings: string[];
+  status: "valid" | "valid-with-warnings" | "invalid";
+  error?: string;
+  game?: Game;
+  errorObject?: PgnImportError;
 }
 
 function tagString(value: unknown): string | undefined {
@@ -70,7 +89,7 @@ function moveVariations(move: PgnMove): string[] | undefined {
   return lines.length ? lines : undefined;
 }
 
-function metadataFromTags(tags: ParseTree["tags"]): Game["metadata"] {
+function metadataFromTags(tags: ParseTree["tags"]): GameMetadata {
   return {
     white: tags?.White ?? "Unknown",
     black: tags?.Black ?? "Unknown",
@@ -88,12 +107,22 @@ function metadataFromTags(tags: ParseTree["tags"]): Game["metadata"] {
   };
 }
 
+function metadataFromSplit(part: { tags: string }): GameMetadata {
+  try {
+    const tags = parse(part.tags, { startRule: "tags" }) as ParseTree["tags"];
+    return metadataFromTags(tags);
+  } catch {
+    return { white: "Unknown", black: "Unknown", result: "*" };
+  }
+}
+
 function convertGame(
   tree: ParseTree,
   source: GameSource,
   sourceReference: string | undefined,
   gameIndex: number,
   originalPgn: string,
+  importWarnings: string[] = [],
 ): Game {
   const variant = tagString(tree.tags?.Variant);
   if (variant && variant.toLowerCase() !== "standard") {
@@ -149,7 +178,8 @@ function convertGame(
     initialFen,
     moves,
     originalPgn,
-    importStatus: "valid",
+    importStatus: importWarnings.length ? "valid-with-warnings" : "valid",
+    importWarnings: importWarnings.length ? importWarnings : undefined,
     createdAt: now,
     updatedAt: now,
     schemaVersion: 1,
@@ -158,38 +188,105 @@ function convertGame(
   return gameSchema.parse(game);
 }
 
-export function parsePgn(
+export function parsePgnCandidates(
   pgn: string,
   source: GameSource = "pgn-text",
   sourceReference?: string,
-): PgnParseResult {
+): PgnCandidate[] {
   const input = pgn.trim();
   if (!input) {
     throw new PgnImportError("The PGN input is empty.");
   }
 
-  let trees: ParseTree[];
+  let parts: ReturnType<typeof split>;
   try {
-    trees = parseGames(input);
+    parts = split(input);
   } catch (error) {
     throw new PgnImportError(
       error instanceof Error ? error.message : "The PGN could not be parsed.",
     );
   }
 
-  if (!trees.length) {
+  if (!parts.length) {
     throw new PgnImportError("No games were found in the PGN input.");
   }
 
-  const games = trees.map((tree, index) =>
-    convertGame(tree, source, sourceReference, index, input),
-  );
+  return parts.map((part, index) => {
+    const originalPgn =
+      part.all?.trim() || `${part.tags ?? ""}\n\n${part.pgn ?? ""}`.trim();
+
+    try {
+      const tree = parseGame(originalPgn, { startRule: "game" });
+      const warnings = (tree.tags?.messages ?? []).map(
+        (message) => message.message,
+      );
+      const game = convertGame(
+        tree,
+        source,
+        sourceReference,
+        index,
+        originalPgn,
+        warnings,
+      );
+
+      return {
+        id: createId(),
+        source,
+        sourceReference,
+        pgn: originalPgn,
+        metadata: game.metadata,
+        plyCount: game.moves.length,
+        warnings,
+        status: warnings.length ? "valid-with-warnings" : "valid",
+        game,
+      };
+    } catch (error) {
+      const importError =
+        error instanceof PgnImportError
+          ? error
+          : new PgnImportError(
+              error instanceof Error
+                ? error.message
+                : "The PGN could not be parsed.",
+              { gameIndex: index },
+            );
+
+      return {
+        id: createId(),
+        source,
+        sourceReference,
+        pgn: originalPgn,
+        metadata: metadataFromSplit(part),
+        plyCount: 0,
+        warnings: [],
+        status: "invalid",
+        error: importError.message,
+        errorObject: importError,
+      };
+    }
+  });
+}
+
+export function parsePgn(
+  pgn: string,
+  source: GameSource = "pgn-text",
+  sourceReference?: string,
+): PgnParseResult {
+  const candidates = parsePgnCandidates(pgn, source, sourceReference);
+  const games = candidates
+    .map((candidate) => candidate.game)
+    .filter((game): game is Game => Boolean(game));
+
+  if (!games.length) {
+    const firstError = candidates.find(
+      (candidate) => candidate.errorObject,
+    )?.errorObject;
+    throw firstError ?? new PgnImportError("No valid game was found.");
+  }
 
   return {
     games,
-    warnings: trees.flatMap((tree) =>
-      (tree.tags?.messages ?? []).map((message) => message.message),
-    ),
+    warnings: candidates.flatMap((candidate) => candidate.warnings),
   };
 }
 

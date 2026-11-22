@@ -12,7 +12,7 @@ const pipeline = [
   {
     label: "Import",
     detail: "PGN, Chess.com, Lichess",
-    phase: "R1 / R2",
+    phase: "R2",
   },
   {
     label: "Analyse",
@@ -76,8 +76,8 @@ export default function DashboardPage() {
                 </Button>
               </div>
               <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
-                R1 proves the first end-to-end path. R2 adds file upload and
-                external game sources.
+                R2 imports paste, file, Chess.com, and Lichess games. R3 adds
+                full game analysis.
               </p>
             </div>
             <div className="mx-auto w-full max-w-[260px] rounded-xl border border-border/80 bg-surface-2 p-2.5 board-shadow lg:mx-0 lg:ml-auto">

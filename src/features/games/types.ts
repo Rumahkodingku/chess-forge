@@ -50,6 +50,7 @@ export const gameSchema = z
     moves: z.array(moveSchema),
     originalPgn: z.string(),
     importStatus: z.enum(["valid", "valid-with-warnings", "invalid"]),
+    importWarnings: z.array(z.string()).optional(),
     createdAt: z.string().min(1),
     updatedAt: z.string().min(1),
     schemaVersion: z.number().int().positive(),

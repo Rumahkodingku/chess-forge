@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PgnImportError, parsePgn, parseSinglePgn } from "@/features/games/pgn";
+import {
+  PgnImportError,
+  parsePgn,
+  parsePgnCandidates,
+  parseSinglePgn,
+} from "@/features/games/pgn";
 
 const STANDARD_PGN = `[Event "Test"]
 [Site "local"]
@@ -53,10 +58,30 @@ describe("parsePgn", () => {
     expect(game.moves[0]?.fenAfter).toContain("Q");
   });
 
-  it("parses multiple games", () => {
+  it("parses multiple games and keeps each original PGN", () => {
     const result = parsePgn(TWO_GAMES_PGN);
     expect(result.games).toHaveLength(2);
     expect(result.games[1]?.metadata.white).toBe("A");
+    expect(result.games[0]?.originalPgn).toContain('Event "Test"');
+    expect(result.games[0]?.originalPgn).not.toContain('Event "Second"');
+    expect(result.games[1]?.originalPgn).toContain('Event "Second"');
+  });
+
+  it("keeps valid candidates when another game is invalid", () => {
+    const pgn = `${STANDARD_PGN}
+
+[Event "Broken"]
+[White "X"]
+[Black "Y"]
+[Result "*"]
+
+1. e4 Qh9 *`;
+
+    const candidates = parsePgnCandidates(pgn);
+    expect(candidates).toHaveLength(2);
+    expect(candidates[0]?.status).toMatch(/valid/);
+    expect(candidates[1]?.status).toBe("invalid");
+    expect(candidates[1]?.error).toBeTruthy();
   });
 
   it("rejects empty input", () => {

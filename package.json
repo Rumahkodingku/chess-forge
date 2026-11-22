@@ -27,6 +27,7 @@
     "@remotion/player": "^4.0.545",
     "@remotion/web-renderer": "^4.0.545",
     "chess.js": "^1.4.0",
+    "chessground": "9.2.1",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "fflate": "^0.8.3",

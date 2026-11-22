@@ -44,6 +44,23 @@ describe("IndexedDB repositories", () => {
     expect(await repository.getById(game.id)).toBeUndefined();
   });
 
+  it("persists import warnings on a game", async () => {
+    const db = await openChessForgeDatabase();
+    const repository = createGameRepository(db);
+    const game = parseSinglePgn(PGN);
+    const warned = {
+      ...game,
+      importStatus: "valid-with-warnings" as const,
+      importWarnings: ["Decoded as Windows-1252."],
+    };
+
+    await repository.save(warned);
+    expect(await repository.getById(game.id)).toMatchObject({
+      importStatus: "valid-with-warnings",
+      importWarnings: ["Decoded as Windows-1252."],
+    });
+  });
+
   it("persists application settings", async () => {
     const db = await openChessForgeDatabase();
     const repository = createSettingsRepository(db);

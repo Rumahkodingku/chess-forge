@@ -1,0 +1,67 @@
+{
+  "id": "2c72606b-e286-45f2-b73a-bb5f7a1642ff",
+  "source": "lichess",
+  "sourceReference": "abcd1234",
+  "metadata": {
+    "white": "Lichess White",
+    "black": "Lichess Black",
+    "result": "*",
+    "event": "R2 Lichess fixture",
+    "site": "Lichess",
+    "date": "2026.11.22",
+    "timeControl": "blitz"
+  },
+  "initialFen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+  "moves": [
+    {
+      "ply": 1,
+      "fullMoveNumber": 1,
+      "color": "w",
+      "san": "e4",
+      "uci": "e2e4",
+      "fenBefore": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "fenAfter": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    },
+    {
+      "ply": 2,
+      "fullMoveNumber": 1,
+      "color": "b",
+      "san": "d5",
+      "uci": "d7d5",
+      "fenBefore": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+      "fenAfter": "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"
+    },
+    {
+      "ply": 3,
+      "fullMoveNumber": 2,
+      "color": "w",
+      "san": "exd5",
+      "uci": "e4d5",
+      "fenBefore": "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+      "fenAfter": "rnbqkbnr/ppp1pppp/8/3P4/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2"
+    },
+    {
+      "ply": 4,
+      "fullMoveNumber": 2,
+      "color": "b",
+      "san": "Qxd5",
+      "uci": "d8d5",
+      "fenBefore": "rnbqkbnr/ppp1pppp/8/3P4/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2",
+      "fenAfter": "rnb1kbnr/ppp1pppp/8/3q4/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 3"
+    },
+    {
+      "ply": 5,
+      "fullMoveNumber": 3,
+      "color": "w",
+      "san": "Nc3",
+      "uci": "b1c3",
+      "fenBefore": "rnb1kbnr/ppp1pppp/8/3q4/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 3",
+      "fenAfter": "rnb1kbnr/ppp1pppp/8/3q4/8/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 3"
+    }
+  ],
+  "originalPgn": "[Event \"R2 Lichess fixture\"]\n[White \"Lichess White\"]\n[Black \"Lichess Black\"]\n\n1. e4 d5 2. exd5 Qxd5 3. Nc3 *",
+  "importStatus": "valid",
+  "createdAt": "2026-11-22T13:40:24.390Z",
+  "updatedAt": "2026-11-22T13:40:24.390Z",
+  "schemaVersion": 1
+}

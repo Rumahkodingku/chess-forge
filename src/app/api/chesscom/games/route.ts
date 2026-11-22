@@ -1,8 +1,8 @@
 import { connection, NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  convertChessComGames,
   fetchChessComGames,
+  summarizeChessComGames,
 } from "@/features/games/adapters/chesscom";
 import { clientKey, errorResponse } from "@/lib/api";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -35,12 +35,11 @@ export async function GET(request: Request) {
       query.year,
       query.month,
     );
-    const conversion = convertChessComGames(games);
+    const summary = summarizeChessComGames(games);
     return NextResponse.json({
-      games: conversion.games,
+      games: summary.summaries,
       total: games.length,
-      converted: conversion.games.length,
-      warnings: conversion.warnings,
+      warnings: summary.warnings,
     });
   } catch (error) {
     return errorResponse(error);

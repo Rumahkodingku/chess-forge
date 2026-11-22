@@ -339,6 +339,10 @@ VideoProject -> Remotion composition -> browser export -> downloadable file
 
 **PRD mapping:** PH-1; AC-01, AC-02, AC-03.
 
+**Spec:** `docs/specs/R2-game-import-and-replay.md`.
+
+**Execution status (2026-11-22):** Gate G6 passed. Evidence is in `docs/evidence/R2/`. R2 imports paste, file, Chess.com, and Lichess games with preview/confirm, persists warnings, replays on Chessground, and keeps the R1 walking skeleton green.
+
 **Goal:** Complete game import, validation, source integration, and board replay.
 
 **Entry criteria:** Gate G5 passes.

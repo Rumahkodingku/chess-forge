@@ -1,8 +1,10 @@
 "use client";
 
+import type { PieceSymbol } from "chess.js";
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpDown,
   ChevronFirst,
   ChevronLast,
   ChevronLeft,
@@ -14,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -31,14 +33,22 @@ import {
 } from "@/features/analysis/engine/stockfish-adapter";
 import { formatEvaluation } from "@/features/analysis/engine/uci";
 import type { PositionAnalysis } from "@/features/analysis/types";
-import type { Game } from "@/features/games/types";
+import { capturedPieces } from "@/features/chess/captured";
+import { CapturedPieces } from "@/features/chess/captured-pieces";
+import { ChessgroundBoard } from "@/features/chess/chessground-board";
+import { nagLabels } from "@/features/chess/nags";
+import {
+  type AnalysisBoardTheme,
+  boardThemeFromSetting,
+} from "@/features/chess/theme";
+import type { Game, Move } from "@/features/games/types";
 import {
   createGameRepository,
   createProjectRepository,
+  createSettingsRepository,
   openChessForgeDatabase,
 } from "@/features/storage/db";
 import { createWalkingSkeletonProject } from "@/features/studio/project-factory";
-import { BoardSvg } from "@/features/studio/rendering/board-svg";
 import { toErrorMessage } from "@/lib/errors";
 import { isUuid } from "@/lib/validation";
 
@@ -48,6 +58,121 @@ type LoadState = "loading" | "ready" | "invalid" | "missing" | "error";
 
 function moveLabel(san: string, fullMoveNumber: number, color: "w" | "b") {
   return `${fullMoveNumber}${color === "w" ? "." : "..."} ${san}`;
+}
+
+function PlayerRow({
+  name,
+  elo,
+  captured,
+  capturedColor,
+  playerColor,
+}: {
+  name: string;
+  elo?: number;
+  captured: PieceSymbol[];
+  capturedColor: "w" | "b";
+  playerColor: "w" | "b";
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <span
+        aria-hidden
+        className={`size-2.5 shrink-0 rounded-full border border-border-strong ${
+          playerColor === "b" ? "bg-zinc-900" : "bg-zinc-100"
+        }`}
+      />
+      <p className="min-w-0 truncate text-[12px] font-medium text-foreground">
+        {name}
+        {elo ? (
+          <span className="ml-1.5 font-mono text-[10px] font-normal text-muted-foreground">
+            {elo}
+          </span>
+        ) : null}
+      </p>
+      <CapturedPieces pieces={captured} color={capturedColor} owner={name} />
+    </div>
+  );
+}
+
+function MoveDetail({ move }: { move?: Move }) {
+  if (!move) {
+    return (
+      <p className="text-[12px] leading-relaxed text-muted-foreground">
+        Starting position selected. Choose a move to see its comment, NAGs, and
+        variations.
+      </p>
+    );
+  }
+
+  const nags = nagLabels(move.nags);
+
+  return (
+    <dl className="space-y-3 text-[11px]">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <dt className="text-muted-foreground">Move</dt>
+        <dd className="font-mono text-[14px] font-medium text-foreground">
+          {moveLabel(move.san, move.fullMoveNumber, move.color)}
+        </dd>
+        <dd className="font-mono text-[10px] text-muted-foreground">
+          {move.uci}
+        </dd>
+      </div>
+      {nags.length ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <dt className="text-muted-foreground">NAG</dt>
+          <dd className="flex flex-wrap gap-1">
+            {nags.map((nag, index) => (
+              <span
+                // biome-ignore lint/suspicious/noArrayIndexKey: labels repeat, index keeps duplicates distinct.
+                key={`${nag}-${index}`}
+                className="rounded border border-brand/30 bg-brand/10 px-1.5 py-0.5 font-mono text-[10px] text-brand"
+              >
+                {nag}
+              </span>
+            ))}
+          </dd>
+        </div>
+      ) : null}
+      {move.comment ? (
+        <div>
+          <dt className="text-muted-foreground">Comment</dt>
+          <dd className="mt-1 leading-relaxed text-foreground">
+            {move.comment}
+          </dd>
+        </div>
+      ) : null}
+      {move.variations?.length ? (
+        <div>
+          <dt className="text-muted-foreground">Variations</dt>
+          <dd className="mt-1 space-y-1">
+            {move.variations.map((variation, index) => (
+              <p
+                // biome-ignore lint/suspicious/noArrayIndexKey: variation lines are read-only text.
+                key={`${variation}-${index}`}
+                className="rounded border border-border/70 bg-surface-2/60 px-2 py-1.5 font-mono leading-relaxed text-muted-foreground"
+              >
+                {variation}
+              </p>
+            ))}
+          </dd>
+        </div>
+      ) : null}
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="rounded border border-border/70 bg-surface-2/60 px-2 py-1.5">
+          <dt className="text-muted-foreground">FEN before</dt>
+          <dd className="mt-1 break-all font-mono text-[10px] leading-relaxed text-foreground">
+            {move.fenBefore}
+          </dd>
+        </div>
+        <div className="rounded border border-border/70 bg-surface-2/60 px-2 py-1.5">
+          <dt className="text-muted-foreground">FEN after</dt>
+          <dd className="mt-1 break-all font-mono text-[10px] leading-relaxed text-foreground">
+            {move.fenAfter}
+          </dd>
+        </div>
+      </div>
+    </dl>
+  );
 }
 
 export default function AnalysisGamePage() {
@@ -60,6 +185,8 @@ export default function AnalysisGamePage() {
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedPly, setSelectedPly] = useState(0);
+  const [orientation, setOrientation] = useState<"w" | "b">("w");
+  const [boardTheme, setBoardTheme] = useState<AnalysisBoardTheme>("forge");
   const [engineState, setEngineState] = useState<EngineState>("idle");
   const [analysis, setAnalysis] = useState<PositionAnalysis | null>(null);
   const [engineError, setEngineError] = useState<string | null>(null);
@@ -79,8 +206,12 @@ export default function AnalysisGamePage() {
     async function load() {
       try {
         const db = await openChessForgeDatabase();
-        const stored = await createGameRepository(db).getById(gameId);
+        const [stored, settings] = await Promise.all([
+          createGameRepository(db).getById(gameId),
+          createSettingsRepository(db).get(),
+        ]);
         if (cancelled) return;
+        setBoardTheme(boardThemeFromSetting(settings?.boardTheme));
         if (!stored) {
           setLoadState("missing");
           return;
@@ -123,6 +254,12 @@ export default function AnalysisGamePage() {
       : (currentMove?.fenAfter ?? game.initialFen)
     : START_FEN;
 
+  const captured = useMemo(
+    () =>
+      game ? capturedPieces(game, selectedPly) : { byWhite: [], byBlack: [] },
+    [game, selectedPly],
+  );
+
   useEffect(() => {
     if (!game) return;
     const moveCount = game.moves.length;
@@ -142,6 +279,14 @@ export default function AnalysisGamePage() {
       if (event.key === "ArrowRight") {
         event.preventDefault();
         setSelectedPly((current) => Math.min(moveCount, current + 1));
+      }
+      if (event.key === "Home") {
+        event.preventDefault();
+        setSelectedPly(0);
+      }
+      if (event.key === "End") {
+        event.preventDefault();
+        setSelectedPly(moveCount);
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -213,7 +358,7 @@ export default function AnalysisGamePage() {
         />
         <EmptyState
           title="No game to open"
-          description="Import the R1 fixture from the analysis page, then choose a move to analyse."
+          description="Import a PGN from the analysis page, then choose a move to analyse."
           action={
             <Button asChild className="h-9">
               <Link href="/analysis">Back to import</Link>
@@ -261,11 +406,33 @@ export default function AnalysisGamePage() {
     engineState === "analysing" ||
     engineState === "stopping";
 
+  const topPlayer =
+    orientation === "w" ? game.metadata.black : game.metadata.white;
+  const bottomPlayer =
+    orientation === "w" ? game.metadata.white : game.metadata.black;
+  const topElo =
+    orientation === "w" ? game.metadata.blackElo : game.metadata.whiteElo;
+  const bottomElo =
+    orientation === "w" ? game.metadata.whiteElo : game.metadata.blackElo;
+  const topCaptured = orientation === "w" ? captured.byBlack : captured.byWhite;
+  const bottomCaptured =
+    orientation === "w" ? captured.byWhite : captured.byBlack;
+  const topCapturedColor = orientation === "w" ? "w" : "b";
+  const bottomCapturedColor = orientation === "w" ? "b" : "w";
+  const positionLabel =
+    selectedPly === 0
+      ? "Starting position"
+      : moveLabel(
+          currentMove?.san ?? "",
+          currentMove?.fullMoveNumber ?? 1,
+          currentMove?.color ?? "w",
+        );
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={`${game.metadata.white} vs ${game.metadata.black}`}
-        description={`${game.metadata.result} · ${game.moves.length} ply. Select a move to analyse the position before it, then forge one scene.`}
+        description={`${game.metadata.result} · ${game.moves.length} ply. Replay the game, select a move, then analyse the position before it.`}
         actions={
           <Button
             asChild
@@ -284,24 +451,50 @@ export default function AnalysisGamePage() {
         <div className="space-y-5">
           <Card className="border-border/80 bg-surface-1">
             <CardHeader>
-              <CardTitle className="text-[15px]">Position</CardTitle>
-              <CardDescription>
-                {selectedPly === 0
-                  ? "Starting position"
-                  : moveLabel(
-                      currentMove?.san ?? "",
-                      currentMove?.fullMoveNumber ?? 1,
-                      currentMove?.color ?? "w",
-                    )}
-              </CardDescription>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-[15px]">Replay</CardTitle>
+                  <CardDescription>{positionLabel}</CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setOrientation((current) => (current === "w" ? "b" : "w"))
+                  }
+                  aria-label="Flip board"
+                  className="h-9 border-border/80 bg-transparent px-3"
+                >
+                  <ArrowUpDown aria-hidden className="size-3.5" />
+                  Flip
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="mx-auto max-w-[620px] rounded-xl border border-border/80 bg-surface-2 p-3 board-shadow">
-                <BoardSvg
-                  fen={boardFen}
-                  lastMove={currentMove?.uci}
-                  coordinates
-                  label="Game position"
+              <div className="mx-auto w-full max-w-[560px] space-y-2">
+                <PlayerRow
+                  name={topPlayer}
+                  elo={topElo}
+                  captured={topCaptured}
+                  capturedColor={topCapturedColor}
+                  playerColor={orientation === "w" ? "b" : "w"}
+                />
+                <div className="rounded-xl border border-border/80 bg-surface-2 p-2 board-shadow">
+                  <ChessgroundBoard
+                    fen={boardFen}
+                    orientation={orientation}
+                    lastMove={currentMove?.uci}
+                    theme={boardTheme}
+                    label={`Position: ${positionLabel}`}
+                  />
+                </div>
+                <PlayerRow
+                  name={bottomPlayer}
+                  elo={bottomElo}
+                  captured={bottomCaptured}
+                  capturedColor={bottomCapturedColor}
+                  playerColor={orientation === "w" ? "w" : "b"}
                 />
               </div>
               <div className="mt-4 grid grid-cols-4 gap-2">
@@ -352,8 +545,10 @@ export default function AnalysisGamePage() {
                   <ChevronLast aria-hidden className="size-4" />
                 </Button>
               </div>
-              <p className="mt-3 text-[11px] text-muted-foreground">
-                Use the left and right arrow keys to move one ply.
+              <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+                Arrow keys move one ply. Home and End jump to the start or end.
+                Shift-click or right-click the board to draw. Annotations clear
+                when the ply or orientation changes.
               </p>
             </CardContent>
           </Card>
@@ -362,11 +557,11 @@ export default function AnalysisGamePage() {
             <CardHeader>
               <CardTitle className="text-[15px]">Moves</CardTitle>
               <CardDescription>
-                Direct selection updates the board and clears the engine result.
+                Select a move to update the board and clear the engine result.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="max-h-[420px] grid grid-cols-2 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-4">
                 <button
                   type="button"
                   onClick={() => setSelectedPly(0)}
@@ -379,22 +574,60 @@ export default function AnalysisGamePage() {
                 >
                   Start
                 </button>
-                {game.moves.map((move) => (
-                  <button
-                    key={move.ply}
-                    type="button"
-                    onClick={() => setSelectedPly(move.ply)}
-                    aria-current={selectedPly === move.ply ? "true" : undefined}
-                    className={`flex min-h-9 items-center rounded-md border px-2.5 text-left font-mono text-[11px] transition-colors ${
-                      selectedPly === move.ply
-                        ? "border-brand/40 bg-brand/10 text-foreground"
-                        : "border-border/70 bg-surface-2/60 text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {moveLabel(move.san, move.fullMoveNumber, move.color)}
-                  </button>
-                ))}
+                {game.moves.map((move) => {
+                  const nags = nagLabels(move.nags);
+                  return (
+                    <button
+                      key={move.ply}
+                      type="button"
+                      onClick={() => setSelectedPly(move.ply)}
+                      aria-current={
+                        selectedPly === move.ply ? "true" : undefined
+                      }
+                      className={`flex min-h-9 items-center justify-between gap-1 rounded-md border px-2.5 py-1 text-left font-mono text-[11px] transition-colors ${
+                        selectedPly === move.ply
+                          ? "border-brand/40 bg-brand/10 text-foreground"
+                          : "border-border/70 bg-surface-2/60 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <span className="truncate">
+                        {moveLabel(move.san, move.fullMoveNumber, move.color)}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1">
+                        {nags.map((nag, index) => (
+                          <span
+                            // biome-ignore lint/suspicious/noArrayIndexKey: labels repeat, index keeps duplicates distinct.
+                            key={`${nag}-${index}`}
+                            className="rounded bg-brand/15 px-1 text-[9px] leading-4 text-brand"
+                          >
+                            {nag}
+                          </span>
+                        ))}
+                        {move.comment ? (
+                          <span
+                            role="img"
+                            aria-label="Has comment"
+                            title="Has comment"
+                            className="size-1.5 rounded-full bg-muted-foreground"
+                          />
+                        ) : null}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/80 bg-surface-1">
+            <CardHeader>
+              <CardTitle className="text-[15px]">Move detail</CardTitle>
+              <CardDescription>
+                Comments, NAGs, and variations are read-only in R2.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MoveDetail move={currentMove} />
             </CardContent>
           </Card>
         </div>
