@@ -16,7 +16,7 @@ const BLACK_FEN = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
 describe("UCI helpers", () => {
   it("parses a centipawn info line", () => {
     const info = parseUciInfo(
-      "info depth 18 seldepth 24 multipv 1 score cp 34 nodes 120000 nps 800000 pv e2e4 e7e5 g1f3",
+      "info depth 18 seldepth 24 multipv 1 score cp 34 time 1234 nodes 120000 nps 800000 pv e2e4 e7e5 g1f3",
       WHITE_FEN,
     );
     expect(info?.depth).toBe(18);
@@ -26,6 +26,7 @@ describe("UCI helpers", () => {
       value: 34,
       perspective: "white",
     });
+    expect(info?.timeMs).toBe(1234);
     expect(info?.pv).toEqual(["e2e4", "e7e5", "g1f3"]);
   });
 

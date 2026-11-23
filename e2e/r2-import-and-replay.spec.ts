@@ -218,13 +218,12 @@ test.describe("R2 import and replay", () => {
     await expect(
       page.locator("dd").filter({ hasText: "test comment" }),
     ).toBeVisible();
-    await expect(page.getByText("Move detail")).toBeVisible();
+    await expect(page.getByText("Move detail", { exact: true })).toBeVisible();
 
     await page.keyboard.press("Home");
-    await expect(page.getByRole("button", { name: "Start" })).toHaveAttribute(
-      "aria-current",
-      "true",
-    );
+    await expect(
+      page.getByRole("button", { name: "Start", exact: true }),
+    ).toHaveAttribute("aria-current", "true");
 
     const boardBox = await page.locator("cg-board").boundingBox();
     expect(boardBox).not.toBeNull();

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:openings": "node scripts/build-openings.mjs",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",

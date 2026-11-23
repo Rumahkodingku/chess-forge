@@ -1,6 +1,5 @@
 "use client";
 
-import type { PieceSymbol } from "chess.js";
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,10 +8,7 @@ import {
   ChevronLast,
   ChevronLeft,
   ChevronRight,
-  Cpu,
   Loader2,
-  Play,
-  Square,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -27,12 +23,40 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { mergeAssessments } from "@/features/analysis/assessment-set";
+import { ClassificationBadge } from "@/features/analysis/components/classification-badge";
+import { EnginePanel } from "@/features/analysis/components/engine-panel";
+import { EvaluationBar } from "@/features/analysis/components/evaluation-bar";
+import { GameAnalysisPanel } from "@/features/analysis/components/game-analysis-panel";
+import { GameSummaryPanel } from "@/features/analysis/components/game-summary-panel";
+import { MoveDetail } from "@/features/analysis/components/move-detail";
 import {
   BrowserStockfishEngine,
+  DEFAULT_ENGINE_VERSION,
+  type EngineProgress,
   type EngineState,
 } from "@/features/analysis/engine/stockfish-adapter";
-import { formatEvaluation } from "@/features/analysis/engine/uci";
-import type { PositionAnalysis } from "@/features/analysis/types";
+import { analysisCacheKey } from "@/features/analysis/engine/uci";
+import {
+  buildOpeningIndex,
+  findOpeningForGame,
+  loadOpeningEntries,
+  type OpeningIndex,
+} from "@/features/analysis/openings/lookup";
+import { applyPv } from "@/features/analysis/pv";
+import {
+  deriveAssessmentsFromCache,
+  type GameAnalysisProgress,
+  runGameAnalysis,
+} from "@/features/analysis/queue";
+import { buildGameSummary } from "@/features/analysis/summary";
+import type {
+  AnalysisPerspective,
+  BrilliantDecision,
+  MoveAssessment,
+  PositionAnalysis,
+} from "@/features/analysis/types";
+import { displayMoveClassification } from "@/features/analysis/types";
 import { capturedPieces } from "@/features/chess/captured";
 import { CapturedPieces } from "@/features/chess/captured-pieces";
 import { ChessgroundBoard } from "@/features/chess/chessground-board";
@@ -43,7 +67,13 @@ import {
 } from "@/features/chess/theme";
 import type { Game, Move } from "@/features/games/types";
 import {
+  type ApplicationSettings,
+  DEFAULT_SETTINGS,
+} from "@/features/settings/types";
+import {
   createGameRepository,
+  createMoveAssessmentRepository,
+  createPositionAnalysisRepository,
   createProjectRepository,
   createSettingsRepository,
   openChessForgeDatabase,
@@ -56,123 +86,17 @@ const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 type LoadState = "loading" | "ready" | "invalid" | "missing" | "error";
 
-function moveLabel(san: string, fullMoveNumber: number, color: "w" | "b") {
-  return `${fullMoveNumber}${color === "w" ? "." : "..."} ${san}`;
+function moveLabel(move: Move) {
+  return `${move.fullMoveNumber}${move.color === "w" ? "." : "..."} ${move.san}`;
 }
 
-function PlayerRow({
-  name,
-  elo,
-  captured,
-  capturedColor,
-  playerColor,
-}: {
-  name: string;
-  elo?: number;
-  captured: PieceSymbol[];
-  capturedColor: "w" | "b";
-  playerColor: "w" | "b";
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-2">
-      <span
-        aria-hidden
-        className={`size-2.5 shrink-0 rounded-full border border-border-strong ${
-          playerColor === "b" ? "bg-zinc-900" : "bg-zinc-100"
-        }`}
-      />
-      <p className="min-w-0 truncate text-[12px] font-medium text-foreground">
-        {name}
-        {elo ? (
-          <span className="ml-1.5 font-mono text-[10px] font-normal text-muted-foreground">
-            {elo}
-          </span>
-        ) : null}
-      </p>
-      <CapturedPieces pieces={captured} color={capturedColor} owner={name} />
-    </div>
-  );
+function sideToMoveFromFen(fen: string): "w" | "b" {
+  return fen.split(" ")[1] === "b" ? "b" : "w";
 }
 
-function MoveDetail({ move }: { move?: Move }) {
-  if (!move) {
-    return (
-      <p className="text-[12px] leading-relaxed text-muted-foreground">
-        Starting position selected. Choose a move to see its comment, NAGs, and
-        variations.
-      </p>
-    );
-  }
-
-  const nags = nagLabels(move.nags);
-
-  return (
-    <dl className="space-y-3 text-[11px]">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <dt className="text-muted-foreground">Move</dt>
-        <dd className="font-mono text-[14px] font-medium text-foreground">
-          {moveLabel(move.san, move.fullMoveNumber, move.color)}
-        </dd>
-        <dd className="font-mono text-[10px] text-muted-foreground">
-          {move.uci}
-        </dd>
-      </div>
-      {nags.length ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <dt className="text-muted-foreground">NAG</dt>
-          <dd className="flex flex-wrap gap-1">
-            {nags.map((nag, index) => (
-              <span
-                // biome-ignore lint/suspicious/noArrayIndexKey: labels repeat, index keeps duplicates distinct.
-                key={`${nag}-${index}`}
-                className="rounded border border-brand/30 bg-brand/10 px-1.5 py-0.5 font-mono text-[10px] text-brand"
-              >
-                {nag}
-              </span>
-            ))}
-          </dd>
-        </div>
-      ) : null}
-      {move.comment ? (
-        <div>
-          <dt className="text-muted-foreground">Comment</dt>
-          <dd className="mt-1 leading-relaxed text-foreground">
-            {move.comment}
-          </dd>
-        </div>
-      ) : null}
-      {move.variations?.length ? (
-        <div>
-          <dt className="text-muted-foreground">Variations</dt>
-          <dd className="mt-1 space-y-1">
-            {move.variations.map((variation, index) => (
-              <p
-                // biome-ignore lint/suspicious/noArrayIndexKey: variation lines are read-only text.
-                key={`${variation}-${index}`}
-                className="rounded border border-border/70 bg-surface-2/60 px-2 py-1.5 font-mono leading-relaxed text-muted-foreground"
-              >
-                {variation}
-              </p>
-            ))}
-          </dd>
-        </div>
-      ) : null}
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="rounded border border-border/70 bg-surface-2/60 px-2 py-1.5">
-          <dt className="text-muted-foreground">FEN before</dt>
-          <dd className="mt-1 break-all font-mono text-[10px] leading-relaxed text-foreground">
-            {move.fenBefore}
-          </dd>
-        </div>
-        <div className="rounded border border-border/70 bg-surface-2/60 px-2 py-1.5">
-          <dt className="text-muted-foreground">FEN after</dt>
-          <dd className="mt-1 break-all font-mono text-[10px] leading-relaxed text-foreground">
-            {move.fenAfter}
-          </dd>
-        </div>
-      </div>
-    </dl>
-  );
+interface PvState {
+  variation: number;
+  step: number;
 }
 
 export default function AnalysisGamePage() {
@@ -182,19 +106,40 @@ export default function AnalysisGamePage() {
     : params.gameId;
   const router = useRouter();
   const [game, setGame] = useState<Game | null>(null);
+  const [settings, setSettings] =
+    useState<ApplicationSettings>(DEFAULT_SETTINGS);
+  const [assessments, setAssessments] = useState<MoveAssessment[]>([]);
+  const [opening, setOpening] =
+    useState<ReturnType<typeof buildGameSummary>["opening"]>(null);
+  const [openingIndex, setOpeningIndex] = useState<OpeningIndex | undefined>();
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedPly, setSelectedPly] = useState(0);
   const [orientation, setOrientation] = useState<"w" | "b">("w");
   const [boardTheme, setBoardTheme] = useState<AnalysisBoardTheme>("forge");
+  const [perspective, setPerspective] = useState<AnalysisPerspective>("white");
+  const [positionAnalysis, setPositionAnalysis] =
+    useState<PositionAnalysis | null>(null);
+  const [positionCached, setPositionCached] = useState(false);
+  const [positionError, setPositionError] = useState<string | null>(null);
   const [engineState, setEngineState] = useState<EngineState>("idle");
-  const [analysis, setAnalysis] = useState<PositionAnalysis | null>(null);
-  const [engineError, setEngineError] = useState<string | null>(null);
+  const [engineProgress, setEngineProgress] = useState<EngineProgress | null>(
+    null,
+  );
+  const [pv, setPv] = useState<PvState | null>(null);
+  const [progress, setProgress] = useState<GameAnalysisProgress | null>(null);
+  const [gameError, setGameError] = useState<string | null>(null);
+  const [decisionBusy, setDecisionBusy] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const engineRef = useRef<BrowserStockfishEngine | null>(null);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
+  const unsubscribeStateRef = useRef<(() => void) | null>(null);
+  const unsubscribeProgressRef = useRef<(() => void) | null>(null);
   const requestIdRef = useRef(0);
+  const pauseRef = useRef(false);
+  const cancelRef = useRef(false);
+  const queueRunningRef = useRef(false);
+  const lastProgressAtRef = useRef(0);
 
   useEffect(() => {
     if (!isUuid(gameId)) {
@@ -206,17 +151,39 @@ export default function AnalysisGamePage() {
     async function load() {
       try {
         const db = await openChessForgeDatabase();
-        const [stored, settings] = await Promise.all([
+        const [stored, storedSettings] = await Promise.all([
           createGameRepository(db).getById(gameId),
           createSettingsRepository(db).get(),
         ]);
         if (cancelled) return;
-        setBoardTheme(boardThemeFromSetting(settings?.boardTheme));
+        const loadedSettings = storedSettings ?? DEFAULT_SETTINGS;
+        setSettings(loadedSettings);
+        setPerspective(loadedSettings.evaluationPerspective);
+        setBoardTheme(boardThemeFromSetting(loadedSettings.boardTheme));
         if (!stored) {
           setLoadState("missing");
           return;
         }
         setGame(stored);
+        const storedAssessments = await createMoveAssessmentRepository(
+          db,
+        ).listByGame(stored.id);
+        let nextAssessments = storedAssessments;
+        if (!nextAssessments.length) {
+          const derived = await deriveAssessmentsFromCache({
+            game: stored,
+            cache: createPositionAnalysisRepository(db),
+            configuration: {
+              ...loadedSettings.enginePreferences,
+              depth: loadedSettings.enginePreferences.depth ?? 14,
+              movetimeMs: undefined,
+              multiPv: 1,
+            },
+            engineVersion: DEFAULT_ENGINE_VERSION,
+          });
+          nextAssessments = derived.assessments;
+        }
+        setAssessments(nextAssessments);
         setLoadState("ready");
       } catch (error) {
         if (!cancelled) {
@@ -232,33 +199,133 @@ export default function AnalysisGamePage() {
   }, [gameId]);
 
   useEffect(() => {
+    if (!game) return;
+    const currentGame = game;
+    let cancelled = false;
+    async function loadOpenings() {
+      try {
+        const entries = await loadOpeningEntries();
+        if (cancelled) return;
+        setOpeningIndex(buildOpeningIndex(entries));
+        setOpening(findOpeningForGame(entries, currentGame));
+      } catch {
+        if (!cancelled) setOpening(null);
+      }
+    }
+    void loadOpenings();
     return () => {
-      unsubscribeRef.current?.();
+      cancelled = true;
+    };
+  }, [game]);
+
+  useEffect(() => {
+    return () => {
+      unsubscribeStateRef.current?.();
+      unsubscribeProgressRef.current?.();
       engineRef.current?.quit();
     };
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: selectedPly is the trigger for clearing stale engine state.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: selectedPly is the trigger for clearing stale position state.
   useEffect(() => {
     requestIdRef.current += 1;
-    engineRef.current?.stop();
-    setAnalysis(null);
-    setEngineError(null);
+    if (!queueRunningRef.current) {
+      engineRef.current?.stop();
+    }
+    setPositionAnalysis(null);
+    setPositionCached(false);
+    setPositionError(null);
+    setPv(null);
   }, [selectedPly]);
 
   const currentMove =
     game && selectedPly > 0 ? game.moves[selectedPly - 1] : undefined;
+  const currentAssessment = assessments.find(
+    (assessment) => assessment.ply === selectedPly,
+  );
   const boardFen = game
     ? selectedPly === 0
       ? game.initialFen
       : (currentMove?.fenAfter ?? game.initialFen)
     : START_FEN;
-
+  const analysedFen = game
+    ? selectedPly === 0
+      ? game.initialFen
+      : (currentMove?.fenBefore ?? game.initialFen)
+    : START_FEN;
   const captured = useMemo(
     () =>
       game ? capturedPieces(game, selectedPly) : { byWhite: [], byBlack: [] },
     [game, selectedPly],
   );
+  const summary = useMemo(
+    () => (game ? buildGameSummary({ game, assessments, opening }) : null),
+    [game, assessments, opening],
+  );
+  const analysedMoves = assessments.length;
+  const queueState = progress?.state ?? "idle";
+
+  useEffect(() => {
+    if (!game) return;
+    const reference = assessments[0];
+    const fen =
+      selectedPly === 0
+        ? game.initialFen
+        : game.moves[selectedPly - 1]?.fenBefore;
+    if (!fen) return;
+
+    const engineVersion = reference?.engineVersion ?? DEFAULT_ENGINE_VERSION;
+    const keys = new Set<string>();
+    if (reference) {
+      const configuration = reference.engineConfiguration;
+      keys.add(
+        analysisCacheKey({
+          fen,
+          engineVersion,
+          depth: configuration.depth,
+          movetimeMs: configuration.movetimeMs,
+          multiPv: configuration.multiPv,
+          threads: configuration.threads,
+          hashMb: configuration.hashMb,
+        }),
+      );
+    }
+    const current = settings.enginePreferences;
+    keys.add(
+      analysisCacheKey({
+        fen,
+        engineVersion,
+        depth: current.movetimeMs ? undefined : (current.depth ?? 14),
+        movetimeMs: current.movetimeMs,
+        multiPv: current.multiPv,
+        threads: current.threads,
+        hashMb: current.hashMb,
+      }),
+    );
+
+    let cancelled = false;
+    async function loadCached() {
+      try {
+        const db = await openChessForgeDatabase();
+        const repository = createPositionAnalysisRepository(db);
+        const results = await Promise.all(
+          [...keys].map((key) => repository.get(key)),
+        );
+        if (cancelled) return;
+        const analysis = results.find(Boolean);
+        if (analysis) {
+          setPositionAnalysis(analysis);
+          setPositionCached(true);
+        }
+      } catch {
+        // A corrupt cache entry is ignored; the user can analyse again.
+      }
+    }
+    void loadCached();
+    return () => {
+      cancelled = true;
+    };
+  }, [assessments, game, selectedPly, settings.enginePreferences]);
 
   useEffect(() => {
     if (!game) return;
@@ -293,36 +360,202 @@ export default function AnalysisGamePage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [game]);
 
-  async function analyse() {
-    if (!game) return;
-    const fen = selectedPly === 0 ? game.initialFen : currentMove?.fenBefore;
-    if (!fen) return;
+  function getEngine(): BrowserStockfishEngine {
+    if (!engineRef.current) {
+      const engine = new BrowserStockfishEngine();
+      engineRef.current = engine;
+      unsubscribeStateRef.current = engine.onStateChange(setEngineState);
+      unsubscribeProgressRef.current = engine.onProgress((next) => {
+        const now = Date.now();
+        if (
+          now - lastProgressAtRef.current > 150 ||
+          next.state !== "analysing"
+        ) {
+          lastProgressAtRef.current = now;
+          setEngineProgress(next);
+        }
+      });
+    }
+    return engineRef.current;
+  }
 
-    setEngineError(null);
-    setAnalysis(null);
+  async function analysePosition(options: { force?: boolean } = {}) {
+    if (!game) return;
+    setPositionError(null);
+    setPositionCached(false);
     const requestId = ++requestIdRef.current;
     try {
-      if (!engineRef.current) {
-        engineRef.current = new BrowserStockfishEngine();
-        unsubscribeRef.current =
-          engineRef.current.onStateChange(setEngineState);
-      }
-      const engine = engineRef.current;
+      const engine = getEngine();
       await engine.load();
-      const result = await engine.analyse({ fen, depth: 14, multiPv: 3 });
-      if (requestId === requestIdRef.current) {
-        setAnalysis(result);
+      const configuration = {
+        ...settings.enginePreferences,
+        depth: settings.enginePreferences.movetimeMs
+          ? undefined
+          : (settings.enginePreferences.depth ?? 14),
+      };
+      const db = await openChessForgeDatabase();
+      const repository = createPositionAnalysisRepository(db);
+      const key = analysisCacheKey({
+        fen: analysedFen,
+        engineVersion: engine.getVersion(),
+        depth: configuration.depth,
+        movetimeMs: configuration.movetimeMs,
+        multiPv: configuration.multiPv,
+        threads: configuration.threads,
+        hashMb: configuration.hashMb,
+      });
+      if (!options.force) {
+        const cached = await repository.get(key);
+        if (requestId !== requestIdRef.current) return;
+        if (cached) {
+          setPositionAnalysis(cached);
+          setPositionCached(true);
+          return;
+        }
+      }
+      const result = await engine.analyse({
+        fen: analysedFen,
+        depth: configuration.depth,
+        movetimeMs: configuration.movetimeMs,
+        multiPv: configuration.multiPv,
+        configuration,
+      });
+      if (requestId !== requestIdRef.current) return;
+      setPositionAnalysis(result);
+      if (!result.partial) {
+        await repository.save(result);
       }
     } catch (error) {
       if (requestId === requestIdRef.current) {
-        setEngineState("error");
-        setEngineError(toErrorMessage(error));
+        setPositionError(toErrorMessage(error));
       }
     }
   }
 
-  function stopAnalysis() {
+  function stopPositionAnalysis() {
     engineRef.current?.stop();
+  }
+
+  function restartPositionAnalysis() {
+    void analysePosition({ force: true });
+  }
+
+  async function ensureOpeningIndex(): Promise<OpeningIndex | undefined> {
+    if (openingIndex) return openingIndex;
+    try {
+      const entries = await loadOpeningEntries();
+      const index = buildOpeningIndex(entries);
+      setOpeningIndex(index);
+      return index;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async function startGameAnalysis() {
+    if (!game || queueRunningRef.current) return;
+    if (
+      engineState === "loading" ||
+      engineState === "analysing" ||
+      engineState === "stopping"
+    ) {
+      return;
+    }
+    pauseRef.current = false;
+    cancelRef.current = false;
+    queueRunningRef.current = true;
+    setGameError(null);
+    setProgress({
+      state: "running",
+      completed: 0,
+      total: game.moves.length + 1,
+      skipped: 0,
+      elapsedMs: 0,
+    });
+    try {
+      const engine = getEngine();
+      await engine.load();
+      const db = await openChessForgeDatabase();
+      const index = await ensureOpeningIndex();
+      const decisions = new Map<number, BrilliantDecision>();
+      for (const assessment of assessments) {
+        if (assessment.brilliantDecision) {
+          decisions.set(assessment.ply, assessment.brilliantDecision);
+        }
+      }
+      const result = await runGameAnalysis({
+        game,
+        engine,
+        cache: createPositionAnalysisRepository(db),
+        configuration: {
+          ...settings.enginePreferences,
+          depth: settings.enginePreferences.depth ?? 14,
+          movetimeMs: undefined,
+          multiPv: 1,
+        },
+        openingIndex: index,
+        existingDecisions: decisions,
+        onProgress: setProgress,
+        shouldPause: () => pauseRef.current,
+        shouldCancel: () => cancelRef.current,
+      });
+      const nextAssessments =
+        result.status === "completed"
+          ? result.assessments
+          : mergeAssessments(assessments, result.assessments);
+      setAssessments(nextAssessments);
+      await createMoveAssessmentRepository(db).replaceForGame(
+        game.id,
+        nextAssessments,
+      );
+      setProgress(result.progress);
+      if (result.status === "error") {
+        setGameError(result.error ?? "Analysis failed.");
+      }
+    } catch (error) {
+      setGameError(toErrorMessage(error));
+      setProgress((current) =>
+        current
+          ? { ...current, state: "error", error: toErrorMessage(error) }
+          : null,
+      );
+    } finally {
+      queueRunningRef.current = false;
+      pauseRef.current = false;
+      cancelRef.current = false;
+    }
+  }
+
+  function pauseGameAnalysis() {
+    pauseRef.current = true;
+  }
+
+  function resumeGameAnalysis() {
+    void startGameAnalysis();
+  }
+
+  function cancelGameAnalysis() {
+    cancelRef.current = true;
+    engineRef.current?.stop();
+  }
+
+  async function decideBrilliant(decision: BrilliantDecision) {
+    if (!game || !currentAssessment) return;
+    setDecisionBusy(true);
+    const updated = assessments.map((assessment) =>
+      assessment.ply === currentAssessment.ply
+        ? { ...assessment, brilliantDecision: decision }
+        : assessment,
+    );
+    setAssessments(updated);
+    try {
+      const db = await openChessForgeDatabase();
+      await createMoveAssessmentRepository(db).replaceForGame(game.id, updated);
+    } catch (error) {
+      setGameError(toErrorMessage(error));
+    } finally {
+      setDecisionBusy(false);
+    }
   }
 
   async function createScene() {
@@ -381,7 +614,7 @@ export default function AnalysisGamePage() {
     );
   }
 
-  if (loadState === "error" || !game) {
+  if (loadState === "error" || !game || !summary) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -405,7 +638,7 @@ export default function AnalysisGamePage() {
     engineState === "loading" ||
     engineState === "analysing" ||
     engineState === "stopping";
-
+  const queueRunning = queueState === "running";
   const topPlayer =
     orientation === "w" ? game.metadata.black : game.metadata.white;
   const bottomPlayer =
@@ -422,17 +655,44 @@ export default function AnalysisGamePage() {
   const positionLabel =
     selectedPly === 0
       ? "Starting position"
-      : moveLabel(
-          currentMove?.san ?? "",
-          currentMove?.fullMoveNumber ?? 1,
-          currentMove?.color ?? "w",
-        );
+      : `Before ${moveLabel(currentMove ?? game.moves[0])}`;
+  const selectedVariation =
+    pv && positionAnalysis
+      ? positionAnalysis.principalVariations.find(
+          (variation) => variation.multipv === pv.variation,
+        )
+      : undefined;
+  const pvPosition =
+    pv && positionAnalysis && selectedVariation
+      ? applyPv(positionAnalysis.fen, selectedVariation.pv, pv.step)
+      : null;
+  const displayedFen = pvPosition?.fen ?? boardFen;
+  const displayedLastMove = pvPosition ? undefined : currentMove?.uci;
+  const displayedLabel = pvPosition
+    ? `PV ${pv?.variation ?? 1}, step ${pv?.step ?? 0}`
+    : `Position: ${positionLabel}`;
+  const analysisEvaluation =
+    positionAnalysis && positionAnalysis.fen === analysedFen
+      ? positionAnalysis.score
+      : currentAssessment?.evaluationBefore;
+  const sideToMove = sideToMoveFromFen(analysedFen);
+  const currentPhase = summary.phases.find(
+    (phase) => selectedPly >= phase.startPly && selectedPly <= phase.endPly,
+  );
+  const gameMoveCount = game.moves.length;
+
+  function jumpTo(ply: number) {
+    setSelectedPly(Math.min(Math.max(0, ply), gameMoveCount));
+    document.getElementById("analysis-board")?.scrollIntoView({
+      block: "start",
+    });
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={`${game.metadata.white} vs ${game.metadata.black}`}
-        description={`${game.metadata.result} · ${game.moves.length} ply. Replay the game, select a move, then analyse the position before it.`}
+        description={`${game.metadata.result} · ${game.moves.length} ply. Replay, analyse, and inspect the move evidence.`}
         actions={
           <Button
             asChild
@@ -447,14 +707,20 @@ export default function AnalysisGamePage() {
         }
       />
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.8fr)]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.85fr)]">
         <div className="space-y-5">
-          <Card className="border-border/80 bg-surface-1">
+          <Card id="analysis-board" className="border-border/80 bg-surface-1">
             <CardHeader>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <CardTitle className="text-[15px]">Replay</CardTitle>
-                  <CardDescription>{positionLabel}</CardDescription>
+                  <CardDescription>
+                    {positionLabel}
+                    {currentPhase ? ` · ${currentPhase.phase}` : ""}
+                    {summary.opening
+                      ? ` · ${summary.opening.name} (${summary.opening.eco})`
+                      : " · Unknown opening"}
+                  </CardDescription>
                 </div>
                 <Button
                   type="button"
@@ -472,7 +738,7 @@ export default function AnalysisGamePage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="mx-auto w-full max-w-[560px] space-y-2">
+              <div className="mx-auto w-full max-w-[620px]">
                 <PlayerRow
                   name={topPlayer}
                   elo={topElo}
@@ -480,29 +746,40 @@ export default function AnalysisGamePage() {
                   capturedColor={topCapturedColor}
                   playerColor={orientation === "w" ? "b" : "w"}
                 />
-                <div className="rounded-xl border border-border/80 bg-surface-2 p-2 board-shadow">
-                  <ChessgroundBoard
-                    fen={boardFen}
-                    orientation={orientation}
-                    lastMove={currentMove?.uci}
-                    theme={boardTheme}
-                    label={`Position: ${positionLabel}`}
+                <div className="mt-2 flex items-stretch gap-2">
+                  {analysisEvaluation ? (
+                    <EvaluationBar
+                      evaluation={analysisEvaluation}
+                      sideToMove={sideToMove}
+                      perspective={perspective}
+                    />
+                  ) : null}
+                  <div className="min-w-0 flex-1 rounded-xl border border-border/80 bg-surface-2 p-2 board-shadow">
+                    <ChessgroundBoard
+                      fen={displayedFen}
+                      orientation={orientation}
+                      lastMove={displayedLastMove}
+                      theme={boardTheme}
+                      label={displayedLabel}
+                    />
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <PlayerRow
+                    name={bottomPlayer}
+                    elo={bottomElo}
+                    captured={bottomCaptured}
+                    capturedColor={bottomCapturedColor}
+                    playerColor={orientation === "w" ? "w" : "b"}
                   />
                 </div>
-                <PlayerRow
-                  name={bottomPlayer}
-                  elo={bottomElo}
-                  captured={bottomCaptured}
-                  capturedColor={bottomCapturedColor}
-                  playerColor={orientation === "w" ? "w" : "b"}
-                />
               </div>
               <div className="mt-4 grid grid-cols-4 gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   className="h-10 border-border/80 bg-transparent"
-                  onClick={() => setSelectedPly(0)}
+                  onClick={() => jumpTo(0)}
                   disabled={selectedPly === 0}
                   aria-label="First move"
                 >
@@ -512,9 +789,7 @@ export default function AnalysisGamePage() {
                   type="button"
                   variant="outline"
                   className="h-10 border-border/80 bg-transparent"
-                  onClick={() =>
-                    setSelectedPly((current) => Math.max(0, current - 1))
-                  }
+                  onClick={() => jumpTo(selectedPly - 1)}
                   disabled={selectedPly === 0}
                   aria-label="Previous move"
                 >
@@ -524,11 +799,7 @@ export default function AnalysisGamePage() {
                   type="button"
                   variant="outline"
                   className="h-10 border-border/80 bg-transparent"
-                  onClick={() =>
-                    setSelectedPly((current) =>
-                      Math.min(game.moves.length, current + 1),
-                    )
-                  }
+                  onClick={() => jumpTo(selectedPly + 1)}
                   disabled={selectedPly === game.moves.length}
                   aria-label="Next move"
                 >
@@ -538,7 +809,7 @@ export default function AnalysisGamePage() {
                   type="button"
                   variant="outline"
                   className="h-10 border-border/80 bg-transparent"
-                  onClick={() => setSelectedPly(game.moves.length)}
+                  onClick={() => jumpTo(game.moves.length)}
                   disabled={selectedPly === game.moves.length}
                   aria-label="Last move"
                 >
@@ -557,14 +828,14 @@ export default function AnalysisGamePage() {
             <CardHeader>
               <CardTitle className="text-[15px]">Moves</CardTitle>
               <CardDescription>
-                Select a move to update the board and clear the engine result.
+                Direct selection updates the board and move detail.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="max-h-[420px] grid grid-cols-2 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-4">
                 <button
                   type="button"
-                  onClick={() => setSelectedPly(0)}
+                  onClick={() => jumpTo(0)}
                   aria-current={selectedPly === 0 ? "true" : undefined}
                   className={`flex min-h-9 items-center rounded-md border px-2.5 text-left font-mono text-[11px] transition-colors ${
                     selectedPly === 0
@@ -575,12 +846,18 @@ export default function AnalysisGamePage() {
                   Start
                 </button>
                 {game.moves.map((move) => {
+                  const assessment = assessments.find(
+                    (item) => item.ply === move.ply,
+                  );
                   const nags = nagLabels(move.nags);
+                  const display = assessment
+                    ? displayMoveClassification(assessment)
+                    : undefined;
                   return (
                     <button
                       key={move.ply}
                       type="button"
-                      onClick={() => setSelectedPly(move.ply)}
+                      onClick={() => jumpTo(move.ply)}
                       aria-current={
                         selectedPly === move.ply ? "true" : undefined
                       }
@@ -590,27 +867,34 @@ export default function AnalysisGamePage() {
                           : "border-border/70 bg-surface-2/60 text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <span className="truncate">
-                        {moveLabel(move.san, move.fullMoveNumber, move.color)}
-                      </span>
-                      <span className="flex shrink-0 items-center gap-1">
-                        {nags.map((nag, index) => (
-                          <span
-                            // biome-ignore lint/suspicious/noArrayIndexKey: labels repeat, index keeps duplicates distinct.
-                            key={`${nag}-${index}`}
-                            className="rounded bg-brand/15 px-1 text-[9px] leading-4 text-brand"
-                          >
-                            {nag}
-                          </span>
-                        ))}
-                        {move.comment ? (
-                          <span
-                            role="img"
-                            aria-label="Has comment"
-                            title="Has comment"
-                            className="size-1.5 rounded-full bg-muted-foreground"
-                          />
-                        ) : null}
+                      <span className="min-w-0">
+                        <span className="block truncate">
+                          {moveLabel(move)}
+                        </span>
+                        <span className="mt-0.5 flex flex-wrap items-center gap-1">
+                          {display ? (
+                            <ClassificationBadge
+                              classification={display}
+                              compact
+                            />
+                          ) : null}
+                          {nags.map((nag, index) => (
+                            <span
+                              // biome-ignore lint/suspicious/noArrayIndexKey: labels repeat, index keeps duplicates distinct.
+                              key={`${nag}-${index}`}
+                              className="rounded bg-brand/15 px-1 text-[9px] leading-4 text-brand"
+                            >
+                              {nag}
+                            </span>
+                          ))}
+                          {move.comment ? (
+                            <span
+                              role="img"
+                              aria-label="Has comment"
+                              className="size-1.5 rounded-full bg-muted-foreground"
+                            />
+                          ) : null}
+                        </span>
                       </span>
                     </button>
                   );
@@ -623,112 +907,75 @@ export default function AnalysisGamePage() {
             <CardHeader>
               <CardTitle className="text-[15px]">Move detail</CardTitle>
               <CardDescription>
-                Comments, NAGs, and variations are read-only in R2.
+                Engine evidence, threats, comments, and variations.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <MoveDetail move={currentMove} />
+              <MoveDetail
+                move={currentMove}
+                assessment={currentAssessment}
+                sideToMove={currentMove?.color ?? "w"}
+                perspective={perspective}
+                decisionBusy={decisionBusy}
+                onDecision={
+                  currentAssessment?.candidateBrilliant
+                    ? (decision) => void decideBrilliant(decision)
+                    : undefined
+                }
+              />
             </CardContent>
           </Card>
+
+          <GameSummaryPanel
+            summary={summary}
+            analysed={analysedMoves > 0}
+            onJump={jumpTo}
+          />
         </div>
 
         <div className="space-y-5">
-          <Card className="border-border/80 bg-surface-1">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-[15px]">
-                <Cpu aria-hidden className="size-4 text-brand" />
-                Engine
-              </CardTitle>
-              <CardDescription>
-                Position before the selected move. One-shot, MultiPV 3.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  onClick={() => void analyse()}
-                  disabled={engineBusy}
-                  className="h-10 px-4"
-                >
-                  {engineState === "loading" || engineState === "analysing" ? (
-                    <Loader2 aria-hidden className="size-4 animate-spin" />
-                  ) : (
-                    <Play aria-hidden className="size-4" />
-                  )}
-                  Analyse position
-                </Button>
-                <Button
-                  type="button"
-                  onClick={stopAnalysis}
-                  disabled={!engineBusy}
-                  variant="outline"
-                  className="h-10 border-border/80 bg-transparent px-4"
-                >
-                  <Square aria-hidden className="size-4" />
-                  Stop
-                </Button>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                State: {engineState}
-              </p>
+          <EnginePanel
+            state={engineState}
+            analysis={positionAnalysis}
+            progress={engineProgress}
+            cached={positionCached}
+            busy={engineBusy}
+            error={positionError}
+            perspective={perspective}
+            positionLabel={positionLabel}
+            sideToMove={sideToMove}
+            onPerspectiveChange={setPerspective}
+            onAnalyse={() => void analysePosition()}
+            onStop={stopPositionAnalysis}
+            onRestart={restartPositionAnalysis}
+            stopDisabled={queueRunning}
+            pvVariation={pv?.variation ?? null}
+            pvStep={pv?.step ?? 0}
+            onPvSelect={(variation) => setPv({ variation, step: 1 })}
+            onPvStep={(step) =>
+              setPv((current) => (current ? { ...current, step } : null))
+            }
+            onPvExit={() => setPv(null)}
+          />
 
-              {engineError ? (
-                <p
-                  role="alert"
-                  className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-[12px] leading-relaxed text-destructive"
-                >
-                  {engineError}
-                </p>
-              ) : null}
+          <GameAnalysisPanel
+            progress={progress}
+            analysedMoves={analysedMoves}
+            moveCount={game.moves.length}
+            error={gameError}
+            busy={engineBusy}
+            onStart={() => void startGameAnalysis()}
+            onPause={pauseGameAnalysis}
+            onResume={resumeGameAnalysis}
+            onCancel={cancelGameAnalysis}
+            onRetry={() => void startGameAnalysis()}
+          />
 
-              {analysis ? (
-                <div className="space-y-3">
-                  <div className="flex items-baseline gap-3">
-                    <p className="font-mono text-[32px] leading-none font-semibold tracking-[-0.04em] text-foreground">
-                      {formatEvaluation(analysis.score)}
-                    </p>
-                    <span className="text-[11px] text-muted-foreground">
-                      White perspective
-                    </span>
-                  </div>
-                  <div className="rounded-lg border border-border/80 bg-surface-2 p-3">
-                    <p className="text-[11px] text-muted-foreground">
-                      Best move
-                    </p>
-                    <p className="mt-1 font-mono text-[15px] text-foreground">
-                      {analysis.bestMoveUci ?? "None"}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    {analysis.principalVariations.map((variation) => (
-                      <div
-                        key={variation.multipv}
-                        className="rounded-lg border border-border/80 bg-surface-2 p-3"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-[11px] text-muted-foreground">
-                            PV {variation.multipv}
-                          </span>
-                          <span className="font-mono text-[12px] text-foreground">
-                            {formatEvaluation(variation.score)}
-                          </span>
-                        </div>
-                        <p className="mt-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
-                          {variation.pv.join(" ")}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[12px] leading-relaxed text-muted-foreground">
-                  Select a move and analyse the position before it. Scene
-                  creation works even if the engine fails.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          {queueState === "running" ? (
+            <p className="text-[10px] text-muted-foreground" aria-live="polite">
+              Current engine depth: {engineProgress?.depth ?? "waiting"}.
+            </p>
+          ) : null}
 
           <Card className="border-border/80 bg-surface-1">
             <CardHeader>
@@ -775,6 +1022,40 @@ export default function AnalysisGamePage() {
           </Card>
         </div>
       </div>
+    </div>
+  );
+}
+
+function PlayerRow({
+  name,
+  elo,
+  captured,
+  capturedColor,
+  playerColor,
+}: {
+  name: string;
+  elo?: number;
+  captured: Parameters<typeof CapturedPieces>[0]["pieces"];
+  capturedColor: "w" | "b";
+  playerColor: "w" | "b";
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <span
+        aria-hidden
+        className={`size-2.5 shrink-0 rounded-full border border-border-strong ${
+          playerColor === "b" ? "bg-zinc-900" : "bg-zinc-100"
+        }`}
+      />
+      <p className="min-w-0 truncate text-[12px] font-medium text-foreground">
+        {name}
+        {elo ? (
+          <span className="ml-1.5 font-mono text-[10px] font-normal text-muted-foreground">
+            {elo}
+          </span>
+        ) : null}
+      </p>
+      <CapturedPieces pieces={captured} color={capturedColor} owner={name} />
     </div>
   );
 }

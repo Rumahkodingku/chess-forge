@@ -5,7 +5,7 @@ spec_version: "1.0"
 roadmap_version: "1.0"
 prd_version: "1.0"
 prd_revision: "1.1"
-status: Ready for implementation
+status: Gate-verified
 last_updated: 2026-11-23
 language: en
 ---

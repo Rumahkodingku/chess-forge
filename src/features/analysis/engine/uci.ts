@@ -10,6 +10,7 @@ export interface UciInfo {
   pv?: string[];
   nodes?: number;
   nps?: number;
+  timeMs?: number;
 }
 
 function sideToMove(fen: string): "w" | "b" {
@@ -58,6 +59,9 @@ export function parseUciInfo(line: string, fen: string): UciInfo | null {
         break;
       case "nps":
         info.nps = Number(tokens[index + 1]);
+        break;
+      case "time":
+        info.timeMs = Number(tokens[index + 1]);
         break;
       case "score": {
         const kind = tokens[index + 1];

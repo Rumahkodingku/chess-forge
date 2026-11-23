@@ -4,6 +4,10 @@ import type {
   MoveAssessment,
   PositionAnalysis,
 } from "@/features/analysis/types";
+import {
+  moveAssessmentSchema,
+  positionAnalysisSchema,
+} from "@/features/analysis/types";
 import { type Game, gameSchema } from "@/features/games/types";
 import {
   type ApplicationSettings,
@@ -304,6 +308,17 @@ export interface SettingsRepository {
   save(settings: ApplicationSettings): Promise<void>;
 }
 
+export interface PositionAnalysisRepository {
+  get(cacheKey: string): Promise<PositionAnalysis | undefined>;
+  save(analysis: PositionAnalysis): Promise<void>;
+  delete(cacheKey: string): Promise<void>;
+}
+
+export interface MoveAssessmentRepository {
+  listByGame(gameId: string): Promise<MoveAssessment[]>;
+  replaceForGame(gameId: string, assessments: MoveAssessment[]): Promise<void>;
+}
+
 export function createGameRepository(db: ChessForgeDatabase): GameRepository {
   return {
     getById: async (id) =>
@@ -381,6 +396,53 @@ export function createSettingsRepository(
         key: "app",
         value: applicationSettingsSchema.parse(settings),
       });
+    },
+  };
+}
+
+export function createPositionAnalysisRepository(
+  db: ChessForgeDatabase,
+): PositionAnalysisRepository {
+  return {
+    get: async (cacheKey) => {
+      const record = await db.get("positionAnalyses", cacheKey);
+      if (record === undefined) return undefined;
+      try {
+        return positionAnalysisSchema.parse(record);
+      } catch {
+        await db.delete("positionAnalyses", cacheKey);
+        return undefined;
+      }
+    },
+    save: async (analysis) => {
+      await db.put("positionAnalyses", positionAnalysisSchema.parse(analysis));
+    },
+    delete: (cacheKey) => db.delete("positionAnalyses", cacheKey),
+  };
+}
+
+export function createMoveAssessmentRepository(
+  db: ChessForgeDatabase,
+): MoveAssessmentRepository {
+  return {
+    listByGame: async (gameId) => {
+      const assessments = await parseStoredList(
+        await db.getAllFromIndex("moveAssessments", "gameId", gameId),
+        moveAssessmentSchema,
+        "move assessment",
+      );
+      return assessments.sort((left, right) => left.ply - right.ply);
+    },
+    replaceForGame: async (gameId, assessments) => {
+      const transaction = db.transaction("moveAssessments", "readwrite");
+      const keys = await transaction.store.index("gameId").getAllKeys(gameId);
+      for (const key of keys) {
+        await transaction.store.delete(key);
+      }
+      for (const assessment of assessments) {
+        await transaction.store.put(moveAssessmentSchema.parse(assessment));
+      }
+      await transaction.done;
     },
   };
 }

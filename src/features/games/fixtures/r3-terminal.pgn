@@ -1,0 +1,8 @@
+[Event "R3 terminal fixture"]
+[Site "local"]
+[Date "2024.01.04"]
+[White "Terminal White"]
+[Black "Terminal Black"]
+[Result "0-1"]
+
+1. f3 e5 2. g4 Qh4# 0-1

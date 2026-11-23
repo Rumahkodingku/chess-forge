@@ -112,7 +112,7 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
         <StorageMeter />
         <div className="flex items-center gap-2 px-1 text-[11px] text-muted-foreground">
           <span className="size-1.5 rounded-full bg-brand" aria-hidden />
-          <span>R2 import + replay</span>
+          <span>R3 full analysis</span>
         </div>
       </div>
     </div>

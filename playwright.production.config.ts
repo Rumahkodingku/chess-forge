@@ -2,7 +2,11 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: ["r1-walking-skeleton.spec.ts", "r2-production.spec.ts"],
+  testMatch: [
+    "r1-walking-skeleton.spec.ts",
+    "r2-production.spec.ts",
+    "r3-production.spec.ts",
+  ],
   fullyParallel: false,
   workers: 1,
   forbidOnly: Boolean(process.env.CI),

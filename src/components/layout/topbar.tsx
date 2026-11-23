@@ -39,7 +39,7 @@ export function Topbar() {
           Local only
         </span>
         <span className="hidden rounded-md border border-border/80 px-2.5 py-1.5 text-[11px] text-muted-foreground md:inline">
-          R2 import + replay
+          R3 full analysis
         </span>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

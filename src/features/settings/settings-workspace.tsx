@@ -94,6 +94,7 @@ export function SettingsWorkspace() {
   const [activeTab, setActiveTab] = useState("general");
   const { requestPersistence } = useStorageStatus();
   const capabilities = useBrowserCapabilities();
+  const engineUsesTime = settings.enginePreferences.movetimeMs !== undefined;
 
   useEffect(() => {
     let cancelled = false;
@@ -362,11 +363,39 @@ export function SettingsWorkspace() {
               Stockfish defaults
             </CardTitle>
             <CardDescription>
-              R0 runs a single-threaded engine proof. Conservative defaults keep
-              the main interface responsive.
+              R3 keeps one single-threaded worker. Conservative defaults keep
+              the interface responsive.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <FieldLabel htmlFor="engine-limit">Analysis limit</FieldLabel>
+              <Select
+                value={engineUsesTime ? "time" : "depth"}
+                onValueChange={(value) =>
+                  updateEngine(
+                    value === "time"
+                      ? {
+                          movetimeMs:
+                            settings.enginePreferences.movetimeMs ?? 2000,
+                          depth: undefined,
+                        }
+                      : {
+                          depth: settings.enginePreferences.depth ?? 14,
+                          movetimeMs: undefined,
+                        },
+                  )
+                }
+              >
+                <SelectTrigger id="engine-limit" className="h-10 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="depth">Depth</SelectItem>
+                  <SelectItem value="time">Time</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5">
               <FieldLabel htmlFor="engine-depth">Depth</FieldLabel>
               <Input
@@ -375,8 +404,25 @@ export function SettingsWorkspace() {
                 min={6}
                 max={30}
                 value={settings.enginePreferences.depth ?? 14}
+                disabled={engineUsesTime}
                 onChange={(event) =>
                   updateEngine({ depth: Number(event.target.value) })
+                }
+                className="h-10"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <FieldLabel htmlFor="engine-movetime">Time limit (ms)</FieldLabel>
+              <Input
+                id="engine-movetime"
+                type="number"
+                min={250}
+                max={30_000}
+                step={250}
+                value={settings.enginePreferences.movetimeMs ?? 2000}
+                disabled={!engineUsesTime}
+                onChange={(event) =>
+                  updateEngine({ movetimeMs: Number(event.target.value) })
                 }
                 className="h-10"
               />
@@ -422,9 +468,32 @@ export function SettingsWorkspace() {
                 className="h-10"
               />
               <p className="text-[10px] text-muted-foreground">
-                Single-thread is the R0 default. Multi-thread is an optional
-                capability after the worker proof.
+                R3 uses the single-thread build. Multi-thread stays deferred.
               </p>
+            </div>
+            <div className="space-y-1.5">
+              <FieldLabel htmlFor="evaluation-perspective">
+                Evaluation perspective
+              </FieldLabel>
+              <Select
+                value={settings.evaluationPerspective}
+                onValueChange={(value) =>
+                  update({
+                    evaluationPerspective: value as "white" | "side-to-move",
+                  })
+                }
+              >
+                <SelectTrigger
+                  id="evaluation-perspective"
+                  className="h-10 w-full"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="white">White perspective</SelectItem>
+                  <SelectItem value="side-to-move">Side to move</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>

@@ -1,10 +1,17 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import type {
+  MoveAssessment,
+  PositionAnalysis,
+} from "@/features/analysis/types";
+import { DEFAULT_ENGINE_CONFIGURATION } from "@/features/analysis/types";
 import { parseSinglePgn } from "@/features/games/pgn";
 import { DEFAULT_SETTINGS } from "@/features/settings/types";
 import {
   closeChessForgeDatabase,
   createAssetRepository,
   createGameRepository,
+  createMoveAssessmentRepository,
+  createPositionAnalysisRepository,
   createProjectRepository,
   createSettingsRepository,
   deleteChessForgeDatabase,
@@ -59,6 +66,71 @@ describe("IndexedDB repositories", () => {
       importStatus: "valid-with-warnings",
       importWarnings: ["Decoded as Windows-1252."],
     });
+  });
+
+  it("round trips position analyses by cache key", async () => {
+    const db = await openChessForgeDatabase();
+    const repository = createPositionAnalysisRepository(db);
+    const analysis: PositionAnalysis = {
+      cacheKey: "test-cache-key",
+      fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      engineVersion: "Stockfish 19",
+      engineConfiguration: DEFAULT_ENGINE_CONFIGURATION,
+      depth: 14,
+      seldepth: 18,
+      nodes: 1200,
+      nps: 800,
+      timeMs: 1500,
+      score: { type: "cp", value: 34, perspective: "white" },
+      bestMoveUci: "e2e4",
+      principalVariations: [],
+      createdAt: "2026-11-23T00:00:00.000Z",
+      schemaVersion: 1,
+    };
+
+    await repository.save(analysis);
+    expect(await repository.get(analysis.cacheKey)).toEqual(analysis);
+  });
+
+  it("deletes a corrupt cached analysis and returns a miss", async () => {
+    const db = await openChessForgeDatabase();
+    const repository = createPositionAnalysisRepository(db);
+    await db.put("positionAnalyses", { cacheKey: "broken" } as never);
+
+    expect(await repository.get("broken")).toBeUndefined();
+    expect(await db.get("positionAnalyses", "broken")).toBeUndefined();
+  });
+
+  it("replaces assessments for one game without touching another", async () => {
+    const db = await openChessForgeDatabase();
+    const repository = createMoveAssessmentRepository(db);
+    const gameId = crypto.randomUUID();
+    const otherGameId = crypto.randomUUID();
+    const base: MoveAssessment = {
+      id: crypto.randomUUID(),
+      gameId,
+      ply: 1,
+      evaluationBefore: { type: "cp", value: 20, perspective: "white" },
+      evaluationAfter: { type: "cp", value: 20, perspective: "white" },
+      centipawnLoss: 0,
+      classification: "best",
+      candidateBrilliant: false,
+      confidence: "high",
+      engineVersion: "Stockfish 19",
+      engineConfiguration: DEFAULT_ENGINE_CONFIGURATION,
+      depth: 14,
+      createdAt: "2026-11-23T00:00:00.000Z",
+      schemaVersion: 2,
+    };
+    const second = { ...base, id: crypto.randomUUID(), ply: 2 };
+    const other = { ...base, id: crypto.randomUUID(), gameId: otherGameId };
+
+    await repository.replaceForGame(gameId, [base, second]);
+    await repository.replaceForGame(otherGameId, [other]);
+    await repository.replaceForGame(gameId, [second]);
+
+    expect(await repository.listByGame(gameId)).toEqual([second]);
+    expect(await repository.listByGame(otherGameId)).toEqual([other]);
   });
 
   it("persists application settings", async () => {

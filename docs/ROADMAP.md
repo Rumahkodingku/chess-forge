@@ -389,7 +389,7 @@ VideoProject -> Remotion composition -> browser export -> downloadable file
 
 **Spec:** `docs/specs/R3-full-stockfish-analysis.md`.
 
-**Execution status (2026-11-23):** Specification ready. Implementation has not started.
+**Execution status (2026-11-23):** Gate G7 passed. Evidence is in `docs/evidence/R3/`. Full-game analysis, cache, classifications, openings, phases, threats, summary, and Candidate Brilliant decisions work locally.
 
 ### 8.1 Tasks
 

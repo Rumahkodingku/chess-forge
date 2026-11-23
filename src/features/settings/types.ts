@@ -17,6 +17,7 @@ export const applicationSettingsSchema = z
     defaultResolution: z.enum(["720p", "1080p"]),
     defaultFrameRate: z.union([z.literal(30), z.literal(60)]),
     enginePreferences: engineConfigurationSchema,
+    evaluationPerspective: z.enum(["white", "side-to-move"]).default("white"),
     motionPreferences: z
       .object({
         reducedMotion: z.boolean(),
@@ -40,6 +41,7 @@ export const DEFAULT_SETTINGS: ApplicationSettings = {
   defaultResolution: "1080p",
   defaultFrameRate: 30,
   enginePreferences: DEFAULT_ENGINE_CONFIGURATION,
+  evaluationPerspective: "white",
   motionPreferences: {
     reducedMotion: false,
   },

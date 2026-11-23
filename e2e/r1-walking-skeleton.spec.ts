@@ -39,10 +39,9 @@ test("R1 walking skeleton imports, analyses, forges, exports, and reopens", asyn
   );
 
   await page.getByRole("button", { name: "First move" }).click();
-  await expect(page.getByRole("button", { name: "Start" })).toHaveAttribute(
-    "aria-current",
-    "true",
-  );
+  await expect(
+    page.getByRole("button", { name: "Start", exact: true }),
+  ).toHaveAttribute("aria-current", "true");
   await page.getByRole("button", { name: "Last move" }).click();
   await expect(page.getByRole("button", { name: "5... Be7" })).toHaveAttribute(
     "aria-current",

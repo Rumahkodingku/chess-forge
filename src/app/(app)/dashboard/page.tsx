@@ -17,7 +17,7 @@ const pipeline = [
   {
     label: "Analyse",
     detail: "Stockfish in a worker",
-    phase: "R1 / R3",
+    phase: "R3",
   },
   {
     label: "Forge",
