@@ -367,14 +367,20 @@ export function createProjectRepository(
       return projects;
     },
     save: async (project) => {
+      let normalized: VideoProject;
       try {
         parseStored(project, videoProjectSchema, "project");
-        await db.put("projects", normalizeProject(project));
+        normalized = normalizeProject(project);
       } catch {
         throw new ValidationError(
           "Project changes could not be saved.",
           "Check the scene timing and fields, then retry.",
         );
+      }
+      try {
+        await db.put("projects", normalized);
+      } catch (error) {
+        throw toStorageError(error);
       }
     },
     delete: (id) => db.delete("projects", id),

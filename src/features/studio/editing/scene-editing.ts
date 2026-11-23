@@ -147,7 +147,35 @@ export function resetSceneField(
           };
         }
         if (field === "annotations") {
-          next = { ...scene, annotations: [] };
+          const moments = project.sourceContext?.criticalMoments ?? [];
+          const moment = scene.moveRange
+            ? moments.find(
+                (item) =>
+                  item.ply >= scene.moveRange!.fromPly &&
+                  item.ply <= scene.moveRange!.toPly,
+              )
+            : undefined;
+          const move =
+            moment && project.gameSnapshot
+              ? project.gameSnapshot.moves[moment.ply - 1]
+              : undefined;
+          next = {
+            ...scene,
+            annotations: move
+              ? [
+                  {
+                    id: createId(),
+                    type: "arrow",
+                    from: move.uci.slice(0, 2),
+                    to: move.uci.slice(2, 4),
+                    color: template.style.effects.glow ? "brand" : "red",
+                    startFrame: 0,
+                    durationInFrames: scene.durationInFrames,
+                    opacity: 1,
+                  },
+                ]
+              : [],
+          };
         }
         if (field === "audioEvents") {
           next = {
@@ -159,24 +187,60 @@ export function resetSceneField(
           };
         }
         if (field === "textOverlays") {
-          const move =
-            scene.moveRange && project.gameSnapshot
-              ? project.gameSnapshot.moves[scene.moveRange.fromPly - 1]
-              : undefined;
-          const overlay = move
-            ? overlayFromStyle(template.style.text.moveLabel, {
+          const overlays: TextOverlay[] = [];
+          if (scene.moveRange && project.gameSnapshot) {
+            const moves = project.gameSnapshot.moves.slice(
+              scene.moveRange.fromPly - 1,
+              scene.moveRange.toPly,
+            );
+            for (const [index, move] of moves.entries()) {
+              const startFrame =
+                template.style.timing.leadInFrames +
+                index *
+                  (template.style.timing.moveDurationFrames +
+                    template.style.timing.gapFrames);
+              const endFrame =
+                index === moves.length - 1
+                  ? scene.durationInFrames
+                  : startFrame +
+                    template.style.timing.moveDurationFrames +
+                    template.style.timing.gapFrames;
+              overlays.push({
+                ...overlayFromStyle(template.style.text.moveLabel, {
+                  id: createId(),
+                  kind: "move-label",
+                  text: `${move.fullMoveNumber}${move.color === "w" ? "." : "..."} ${move.san}`,
+                  durationInFrames: Math.max(1, endFrame - startFrame),
+                }),
+                startFrame,
+              });
+            }
+            const moment = project.sourceContext?.criticalMoments?.find(
+              (item) =>
+                item.ply >= scene.moveRange!.fromPly &&
+                item.ply <= scene.moveRange!.toPly,
+            );
+            if (moment) {
+              overlays.push(
+                overlayFromStyle(template.style.text.explanation, {
+                  id: createId(),
+                  kind: "explanation",
+                  text: moment.reason ?? moment.classification ?? moment.san,
+                  durationInFrames: scene.durationInFrames,
+                }),
+              );
+            }
+          } else {
+            overlays.push(
+              overlayFromStyle(template.style.text.title, {
                 id: createId(),
-                kind: "move-label",
-                text: `${move.fullMoveNumber}${move.color === "w" ? "." : "..."} ${move.san}`,
-                durationInFrames: scene.durationInFrames,
-              })
-            : overlayFromStyle(template.style.text.caption, {
-                id: createId(),
-                kind: "caption",
+                kind: "title",
                 text: project.name,
                 durationInFrames: scene.durationInFrames,
-              });
-          next = { ...scene, textOverlays: [overlay] };
+              }),
+            );
+          }
+          next = { ...scene, textOverlays: overlays };
         }
         return { ...next, overrides };
       }),

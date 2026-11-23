@@ -10,6 +10,37 @@ import type {
 } from "@/features/studio/scene/scene.types";
 import { createId } from "@/lib/id";
 
+function trimSceneContent(scene: Scene, durationInFrames: number): Scene {
+  return {
+    ...scene,
+    durationInFrames,
+    annotations: scene.annotations
+      .filter((annotation) => annotation.startFrame < durationInFrames)
+      .map((annotation) => ({
+        ...annotation,
+        durationInFrames: Math.min(
+          annotation.durationInFrames,
+          durationInFrames - annotation.startFrame,
+        ),
+      })),
+    textOverlays: scene.textOverlays
+      .filter((overlay) => overlay.startFrame < durationInFrames)
+      .map((overlay) => ({
+        ...overlay,
+        durationInFrames: Math.min(
+          overlay.durationInFrames,
+          durationInFrames - overlay.startFrame,
+        ),
+      })),
+    camera: {
+      keyframes: scene.camera.keyframes.map((keyframe) => ({
+        ...keyframe,
+        frame: Math.max(0, Math.min(durationInFrames - 1, keyframe.frame)),
+      })),
+    },
+  };
+}
+
 function withScenes(project: VideoProject, scenes: Scene[]): VideoProject {
   return {
     ...project,
@@ -25,13 +56,10 @@ export function setSceneDuration(
 ): VideoProject {
   const scenes = project.scenes.map((scene) =>
     scene.id === sceneId
-      ? {
-          ...scene,
-          durationInFrames: Math.max(
-            sceneMinimumFrames(scene),
-            Math.floor(durationInFrames),
-          ),
-        }
+      ? trimSceneContent(
+          scene,
+          Math.max(sceneMinimumFrames(scene), Math.floor(durationInFrames)),
+        )
       : scene,
   );
   return withScenes(project, scenes);

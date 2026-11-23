@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   createAssetRepository,
+  createProjectRepository,
   openChessForgeDatabase,
 } from "@/features/storage/db";
 import {
@@ -89,8 +90,25 @@ export function ProjectAudioEditor({
     }));
     if (assetId && !stillReferenced) {
       void (async () => {
-        const db = await openChessForgeDatabase();
-        await createAssetRepository(db).delete(assetId);
+        try {
+          const db = await openChessForgeDatabase();
+          const projects = await createProjectRepository(db).list();
+          const usedElsewhere = projects.some(
+            (item) =>
+              item.id !== project.id &&
+              (item.assets.some((asset) => asset.id === assetId) ||
+                item.audioTracks.some(
+                  (track) =>
+                    track.source.type === "asset" &&
+                    track.source.assetId === assetId,
+                )),
+          );
+          if (!usedElsewhere) {
+            await createAssetRepository(db).delete(assetId);
+          }
+        } catch (error) {
+          console.warn("Audio asset cleanup failed.", error);
+        }
       })();
     }
   }

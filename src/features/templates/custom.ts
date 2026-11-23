@@ -52,7 +52,13 @@ function styleFromProject(project: VideoProject): TemplateStyle | null {
       ),
       caption: textStyleFromOverlay(overlayFor("caption"), base.text.caption),
     },
-    audio: { ...base.audio, sceneSfx: scene.audioEvents },
+    audio: {
+      ...base.audio,
+      sceneSfx: scene.audioEvents.map((event, index) => ({
+        ...event,
+        id: `custom-sfx-${index}-${event.trigger}`,
+      })),
+    },
   };
 }
 

@@ -3,7 +3,11 @@
 import { ArrowDown, ArrowUp, Copy, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { projectDurationInFrames } from "@/features/studio/rendering/timeline";
+import { semanticMoveTrigger } from "@/features/studio/rendering/audio";
+import {
+  moveFrameMap,
+  projectDurationInFrames,
+} from "@/features/studio/rendering/timeline";
 import type { VideoProject } from "@/features/studio/scene/scene.types";
 
 interface TimelinePanelProps {
@@ -57,18 +61,30 @@ export function TimelinePanel({
   );
   const sfxSpans = useMemo(
     () =>
-      project.scenes.flatMap((scene) =>
-        scene.audioEvents
-          .filter((event) => !event.muted)
-          .map((event) => ({
-            id: `${scene.id}-${event.id}`,
-            start:
-              scene.startFrame + scene.timing.leadInFrames + event.frameOffset,
-            duration: 18,
-            label: event.trigger,
-          })),
-      ),
-    [project.scenes],
+      project.scenes.flatMap((scene) => {
+        const spans: Array<{
+          id: string;
+          start: number;
+          duration: number;
+          label: string;
+        }> = [];
+        for (const frame of moveFrameMap(scene)) {
+          const move = project.gameSnapshot?.moves[frame.ply - 1];
+          if (!move) continue;
+          const trigger = semanticMoveTrigger(move);
+          for (const event of scene.audioEvents) {
+            if (event.muted || event.trigger !== trigger) continue;
+            spans.push({
+              id: `${scene.id}-${event.id}-${frame.ply}`,
+              start: scene.startFrame + frame.endFrame + event.frameOffset,
+              duration: 18,
+              label: event.trigger,
+            });
+          }
+        }
+        return spans;
+      }),
+    [project.scenes, project.gameSnapshot],
   );
   const annotationSpans = useMemo(
     () =>

@@ -334,6 +334,26 @@ export default function StudioProjectPage() {
       ),
     );
   }, [project]);
+  const annotationWarnings = useMemo(() => {
+    if (!project) return [];
+    const valid = (square: string | undefined) =>
+      Boolean(square && /^[a-h][1-8]$/.test(square));
+    return project.scenes.flatMap((scene, index) =>
+      scene.annotations
+        .filter((annotation) =>
+          annotation.type === "arrow"
+            ? !valid(annotation.from) || !valid(annotation.to)
+            : !valid(
+                annotation.square ??
+                  (annotation.type === "highlight" ? annotation.to : undefined),
+              ),
+        )
+        .map(
+          (annotation) =>
+            `Scene ${index + 1}: Annotation ${annotation.id} has an invalid square and is skipped.`,
+        ),
+    );
+  }, [project]);
 
   function clearResult() {
     if (urlRef.current) {
@@ -510,7 +530,7 @@ export default function StudioProjectPage() {
 
   const exporting = exportState === "exporting";
   const downloadName = projectFileName(project.name, resultFormat ?? format);
-  const warnings = [...audioWarnings, ...textWarnings];
+  const warnings = [...audioWarnings, ...textWarnings, ...annotationWarnings];
 
   return (
     <div className="space-y-6">

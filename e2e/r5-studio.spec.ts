@@ -135,10 +135,10 @@ test.describe("R5 video studio", () => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/templates");
     await expect(page.getByText("My R5 template")).toBeVisible();
-    await page
-      .getByRole("button", { name: "Apply to project" })
-      .first()
-      .click();
+    const customCard = page
+      .getByRole("heading", { name: "My R5 template" })
+      .locator("xpath=ancestor::div[contains(@class,'space-y-2')][1]");
+    await customCard.getByRole("button", { name: "Apply to project" }).click();
     await page.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(page.getByText("Template style applied.")).toBeVisible();
   });
