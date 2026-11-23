@@ -203,13 +203,127 @@ export const audioTrackSchema = z
   })
   .strict();
 
+export const templateTextStyleSchema = z
+  .object({
+    font: textFontSchema,
+    fontSize: z.number().positive().max(240),
+    color: textColorSchema,
+    align: textAlignSchema,
+    position: textPositionSchema,
+    x: z.number(),
+    y: z.number(),
+    maxWidth: z.number().positive().max(100),
+    background: z.boolean(),
+  })
+  .strict();
+
+export const templateStyleSchema = z
+  .object({
+    boardTheme: boardThemeSchema,
+    coordinates: z.boolean(),
+    effects: effectsSchema,
+    camera: z
+      .object({
+        introZoom: z.number().min(1).max(3),
+        sceneZoom: z.number().min(1).max(3),
+        focusActiveMove: z.boolean(),
+        easing: easingSchema,
+      })
+      .strict(),
+    timing: sceneTimingSchema,
+    text: z
+      .object({
+        title: templateTextStyleSchema,
+        moveLabel: templateTextStyleSchema,
+        explanation: templateTextStyleSchema,
+        caption: templateTextStyleSchema,
+      })
+      .strict(),
+    audio: z
+      .object({
+        sceneSfx: z.array(sceneAudioEventSchema),
+        projectTracks: z.array(audioTrackSchema.omit({ id: true })),
+      })
+      .strict(),
+  })
+  .strict();
+
+export const templateSceneRulesSchema = z
+  .object({
+    defaultSourceMode: z.enum(["full", "moments", "range"]),
+    movesPerScene: z.number().int().min(1).max(12),
+    includeIntro: z.boolean(),
+    includeOutro: z.boolean(),
+    introDurationInFrames: z.number().int().positive(),
+    outroDurationInFrames: z.number().int().positive(),
+    leadInPlies: z.number().int().nonnegative(),
+    trailInPlies: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const templateSnapshotSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    version: z.number().int().positive(),
+    description: z.string(),
+    defaultCanvas: canvasSettingsSchema,
+    defaultFrameRate: z.union([z.literal(30), z.literal(60)]),
+    style: templateStyleSchema,
+    sceneRules: templateSceneRulesSchema,
+  })
+  .strict();
+
+export const criticalMomentReferenceSchema = z
+  .object({
+    ply: z.number().int().positive(),
+    san: z.string().min(1),
+    classification: z.string().optional(),
+    reason: z.string().optional(),
+  })
+  .strict();
+
+export const sourceSelectionSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("full") }).strict(),
+  z
+    .object({
+      mode: z.literal("range"),
+      fromPly: z.number().int().positive(),
+      toPly: z.number().int().positive(),
+    })
+    .strict(),
+  z
+    .object({
+      mode: z.literal("moments"),
+      moments: z.array(criticalMomentReferenceSchema),
+      leadInPlies: z.number().int().nonnegative(),
+      trailInPlies: z.number().int().nonnegative(),
+    })
+    .strict(),
+]);
+
+export const sourceContextSchema = z
+  .object({
+    opening: z
+      .object({ eco: z.string(), name: z.string() })
+      .strict()
+      .nullable()
+      .optional(),
+    result: z.string().optional(),
+    criticalMoments: z.array(criticalMomentReferenceSchema).optional(),
+  })
+  .strict();
+
 export const videoProjectSchema = z
   .object({
     id: z.string().uuid(),
     name: z.string().min(1),
     sourceGameId: z.string().uuid().optional(),
     templateId: z.string().min(1),
-    projectVersion: z.literal(2),
+    projectVersion: z.literal(3),
+    template: templateSnapshotSchema.nullable(),
+    sourceSelection: sourceSelectionSchema.optional(),
+    sourceContext: sourceContextSchema.optional(),
     canvas: canvasSettingsSchema,
     frameRate: z.union([z.literal(30), z.literal(60)]),
     scenes: z.array(sceneSchema),
@@ -236,7 +350,7 @@ export const videoProjectSchema = z
     ),
     createdAt: z.string().min(1),
     updatedAt: z.string().min(1),
-    schemaVersion: z.literal(2),
+    schemaVersion: z.literal(3),
   })
   .strict();
 
@@ -252,6 +366,15 @@ export type TextOverlay = z.infer<typeof textOverlaySchema>;
 export type Effects = z.infer<typeof effectsSchema>;
 export type SceneAudioEvent = z.infer<typeof sceneAudioEventSchema>;
 export type AudioTrack = z.infer<typeof audioTrackSchema>;
+export type TemplateTextStyle = z.infer<typeof templateTextStyleSchema>;
+export type TemplateStyle = z.infer<typeof templateStyleSchema>;
+export type TemplateSceneRules = z.infer<typeof templateSceneRulesSchema>;
+export type TemplateSnapshot = z.infer<typeof templateSnapshotSchema>;
+export type CriticalMomentReference = z.infer<
+  typeof criticalMomentReferenceSchema
+>;
+export type SourceSelection = z.infer<typeof sourceSelectionSchema>;
+export type SourceContext = z.infer<typeof sourceContextSchema>;
 export type Scene = z.infer<typeof sceneSchema>;
 export type GameSnapshot = z.infer<typeof gameSnapshotSchema>;
 export type VideoProject = z.infer<typeof videoProjectSchema>;

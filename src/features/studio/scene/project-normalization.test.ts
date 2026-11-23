@@ -3,6 +3,8 @@ import { R1_FIXTURE_PGN } from "@/features/games/fixtures/r1-walking-skeleton";
 import { parseSinglePgn } from "@/features/games/pgn";
 import { normalizeProject } from "@/features/studio/scene/project-normalization";
 import { videoProjectSchema } from "@/features/studio/scene/scene.types";
+import { BUILT_IN_TEMPLATES } from "@/features/templates/builtins";
+import { toTemplateSnapshot } from "@/features/templates/snapshot";
 import { createId } from "@/lib/id";
 
 const game = parseSinglePgn(R1_FIXTURE_PGN, "pgn-text", "R4 migration");
@@ -75,11 +77,11 @@ const legacyProject = {
 };
 
 describe("normalizeProject", () => {
-  it("migrates a v1 project to scene v2", () => {
+  it("migrates a v1 project to scene v2 and project v3", () => {
     const project = normalizeProject(legacyProject);
     expect(videoProjectSchema.safeParse(project).success).toBe(true);
-    expect(project.projectVersion).toBe(2);
-    expect(project.schemaVersion).toBe(2);
+    expect(project.projectVersion).toBe(3);
+    expect(project.schemaVersion).toBe(3);
     const scene = project.scenes[0];
     expect(scene?.schemaVersion).toBe(2);
     expect(scene?.boardState.theme).toBe("forge");
@@ -190,5 +192,32 @@ describe("normalizeProject", () => {
     expect(scene?.durationInFrames).toBe(40);
     expect(scene?.timing.moveDurationFrames).toBe(30);
     expect(scene?.textOverlays[0]?.durationInFrames).toBe(40);
+  });
+
+  it("normalises a v2 project to v3 with a null template", () => {
+    const current = normalizeProject(legacyProject);
+    const v2 = {
+      ...current,
+      projectVersion: 2,
+      schemaVersion: 2,
+      template: undefined,
+    };
+    const project = normalizeProject(v2);
+    expect(project.projectVersion).toBe(3);
+    expect(project.schemaVersion).toBe(3);
+    expect(project.template).toBeNull();
+  });
+
+  it("preserves a valid template snapshot", () => {
+    const template = BUILT_IN_TEMPLATES[0];
+    if (!template) throw new Error("Missing built-in template");
+    const current = normalizeProject(legacyProject);
+    const project = normalizeProject({
+      ...current,
+      template: toTemplateSnapshot(template),
+      templateId: template.id,
+    });
+    expect(project.template?.id).toBe(template.id);
+    expect(project.templateId).toBe(template.id);
   });
 });

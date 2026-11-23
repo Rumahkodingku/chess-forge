@@ -121,7 +121,8 @@ export function createWalkingSkeletonProject({
     name: `${game.metadata.white} vs ${game.metadata.black}`,
     sourceGameId: game.id,
     templateId: R1_TEMPLATE_ID,
-    projectVersion: 2,
+    projectVersion: 3,
+    template: null,
     canvas: {
       aspectRatio: "9:16",
       width: 1080,
@@ -143,7 +144,7 @@ export function createWalkingSkeletonProject({
     },
     createdAt: now,
     updatedAt: now,
-    schemaVersion: 2,
+    schemaVersion: 3,
   };
 
   return videoProjectSchema.parse(project);

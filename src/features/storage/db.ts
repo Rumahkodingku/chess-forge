@@ -15,6 +15,7 @@ import {
 } from "@/features/settings/types";
 import { normalizeProject } from "@/features/studio/scene/project-normalization";
 import type { Scene, VideoProject } from "@/features/studio/scene/scene.types";
+import { normalizeTemplate } from "@/features/templates/normalization";
 import { type Template, templateSchema } from "@/features/templates/types";
 import {
   StorageMigrationError,
@@ -364,10 +365,29 @@ export function createTemplateRepository(
   db: ChessForgeDatabase,
 ): TemplateRepository {
   return {
-    getById: async (id) =>
-      parseStored(await db.get("templates", id), templateSchema, "template"),
-    list: async () =>
-      parseStoredList(await db.getAll("templates"), templateSchema, "template"),
+    getById: async (id) => {
+      const record = await db.get("templates", id);
+      if (record === undefined) return undefined;
+      const template = normalizeTemplate(record);
+      if (!template) {
+        console.warn(`Stored template ${id} is invalid and was skipped.`);
+        return undefined;
+      }
+      return template;
+    },
+    list: async () => {
+      const records = await db.getAll("templates");
+      const templates: Template[] = [];
+      for (const record of records) {
+        const template = normalizeTemplate(record);
+        if (template) {
+          templates.push(template);
+        } else {
+          console.warn("A stored template is invalid and was skipped.");
+        }
+      }
+      return templates;
+    },
     save: async (template) => {
       await db.put("templates", templateSchema.parse(template));
     },

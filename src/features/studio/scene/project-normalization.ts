@@ -14,9 +14,15 @@ import {
   effectsSchema,
   gameSnapshotSchema,
   type Scene,
+  type SourceContext,
+  type SourceSelection,
   sceneAudioEventSchema,
   sceneSchema,
+  sourceContextSchema,
+  sourceSelectionSchema,
+  type TemplateSnapshot,
   type TextOverlay,
+  templateSnapshotSchema,
   textOverlaySchema,
   type VideoProject,
   videoProjectSchema,
@@ -72,6 +78,9 @@ const rawProjectSchema = z
     frameRate: z.union([z.literal(30), z.literal(60)]),
     scenes: z.array(z.unknown()),
     gameSnapshot: z.unknown().optional(),
+    template: z.unknown().optional(),
+    sourceSelection: z.unknown().optional(),
+    sourceContext: z.unknown().optional(),
     tracks: z
       .object({
         text: z.array(z.string()),
@@ -460,6 +469,36 @@ function legacyAudioTracks(
   return tracks;
 }
 
+function normalizeTemplateSnapshot(value: unknown): TemplateSnapshot | null {
+  if (value === undefined || value === null) return null;
+  const parsed = templateSnapshotSchema.safeParse(value);
+  if (!parsed.success) {
+    console.warn(
+      "Project template snapshot is invalid; template reset is disabled.",
+    );
+    return null;
+  }
+  return parsed.data;
+}
+
+function normalizeSourceSelection(value: unknown): SourceSelection | undefined {
+  if (value === undefined) return undefined;
+  const parsed = sourceSelectionSchema.safeParse(value);
+  if (!parsed.success) {
+    console.warn(
+      "Project source selection is invalid; regeneration is disabled.",
+    );
+    return undefined;
+  }
+  return parsed.data;
+}
+
+function normalizeSourceContext(value: unknown): SourceContext | undefined {
+  if (value === undefined) return undefined;
+  const parsed = sourceContextSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
+
 export function normalizeProject(input: unknown): VideoProject {
   const raw = rawProjectSchema.parse(input);
   const rawScenes = raw.scenes;
@@ -490,12 +529,19 @@ export function normalizeProject(input: unknown): VideoProject {
     ? raw.audioTracks.map((track) => audioTrackSchema.parse(track))
     : legacyAudioTracks(rawScenes, scenes);
 
+  const template = normalizeTemplateSnapshot(raw.template);
+  const sourceSelection = normalizeSourceSelection(raw.sourceSelection);
+  const sourceContext = normalizeSourceContext(raw.sourceContext);
+
   const project = {
     id: raw.id,
     name: raw.name,
     sourceGameId: raw.sourceGameId,
-    templateId: raw.templateId,
-    projectVersion: 2 as const,
+    templateId: template?.id ?? raw.templateId,
+    projectVersion: 3 as const,
+    template,
+    sourceSelection,
+    sourceContext,
     canvas: raw.canvas,
     frameRate: raw.frameRate,
     scenes,
@@ -505,7 +551,7 @@ export function normalizeProject(input: unknown): VideoProject {
     assets: raw.assets,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
-    schemaVersion: 2 as const,
+    schemaVersion: 3 as const,
   };
 
   return videoProjectSchema.parse(project);

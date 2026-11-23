@@ -209,7 +209,7 @@ describe("IndexedDB repositories", () => {
     await db.put("projects", legacy as never);
 
     const stored = await repository.getById(project.id);
-    expect(stored?.projectVersion).toBe(2);
+    expect(stored?.projectVersion).toBe(3);
     expect(stored?.scenes[0]?.timing.leadInFrames).toBe(10);
     expect(stored?.scenes[0]?.boardState.theme).toBe("forge");
   });

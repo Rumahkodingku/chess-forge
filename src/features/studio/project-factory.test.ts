@@ -21,8 +21,8 @@ describe("walking skeleton project factory", () => {
       height: 1920,
     });
     expect(project.frameRate).toBe(30);
-    expect(project.projectVersion).toBe(2);
-    expect(project.schemaVersion).toBe(2);
+    expect(project.projectVersion).toBe(3);
+    expect(project.schemaVersion).toBe(3);
     expect(project.scenes).toHaveLength(1);
     expect(project.audioTracks).toEqual([]);
     expect(project.gameSnapshot?.moves).toHaveLength(10);

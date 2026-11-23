@@ -53,7 +53,8 @@ function project(scenes: Scene[]): VideoProject {
     id: crypto.randomUUID(),
     name: "Timeline",
     templateId: "test",
-    projectVersion: 2,
+    projectVersion: 3,
+    template: null,
     canvas: { aspectRatio: "9:16", width: 1080, height: 1920 },
     frameRate: 30,
     scenes,
@@ -62,7 +63,7 @@ function project(scenes: Scene[]): VideoProject {
     assets: [],
     createdAt: "2026-11-23T00:00:00.000Z",
     updatedAt: "2026-11-23T00:00:00.000Z",
-    schemaVersion: 2,
+    schemaVersion: 3,
   };
 }
 
