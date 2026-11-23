@@ -204,6 +204,14 @@ export function setCanvas(
   };
 }
 
+export function setFrameRate(
+  project: VideoProject,
+  frameRate: 30 | 60,
+): VideoProject {
+  if (project.frameRate === frameRate) return project;
+  return { ...project, frameRate, updatedAt: new Date().toISOString() };
+}
+
 export function setProjectName(
   project: VideoProject,
   name: string,

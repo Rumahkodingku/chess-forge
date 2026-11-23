@@ -11,6 +11,7 @@ import {
   duplicateScene,
   reorderScenes,
   setCanvas,
+  setFrameRate,
   setSceneDuration,
 } from "@/features/studio/editing/project-operations";
 import { createR4FixtureProject } from "@/features/studio/fixtures/r4-project";
@@ -86,6 +87,15 @@ describe("project scene operations", () => {
     expect(added?.boardState.fen).toBe(
       project.gameSnapshot?.moves[source.moveRange.toPly - 1]?.fenAfter,
     );
+  });
+
+  it("changes frame rate without changing scene frame counts", () => {
+    const project = createR4FixtureProject();
+    const frames = project.scenes.map((scene) => scene.durationInFrames);
+    const next = setFrameRate(project, 60);
+    expect(next.frameRate).toBe(60);
+    expect(next.scenes.map((scene) => scene.durationInFrames)).toEqual(frames);
+    expect(next.scenes).toEqual(project.scenes);
   });
 
   it("switches canvas presets", () => {
