@@ -56,10 +56,15 @@ export function setSceneDuration(
 ): VideoProject {
   const scenes = project.scenes.map((scene) =>
     scene.id === sceneId
-      ? trimSceneContent(
-          scene,
-          Math.max(sceneMinimumFrames(scene), Math.floor(durationInFrames)),
-        )
+      ? (() => {
+          const nextDuration = Math.max(
+            sceneMinimumFrames(scene),
+            Math.floor(durationInFrames),
+          );
+          return nextDuration < scene.durationInFrames
+            ? trimSceneContent(scene, nextDuration)
+            : { ...scene, durationInFrames: nextDuration };
+        })()
       : scene,
   );
   return withScenes(project, scenes);

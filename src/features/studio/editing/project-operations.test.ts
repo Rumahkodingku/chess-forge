@@ -25,6 +25,28 @@ describe("project scene operations", () => {
     expect(next.scenes[1]?.durationInFrames).toBe(sceneMinimumFrames(scene));
   });
 
+  it("does not trim content when duration grows", () => {
+    const project = createR4FixtureProject();
+    const scene = project.scenes[1];
+    if (!scene) throw new Error("Missing scene");
+    const next = setSceneDuration(project, scene.id, 300);
+    expect(next.scenes[1]?.camera).toEqual(scene.camera);
+    expect(next.scenes[1]?.textOverlays).toEqual(scene.textOverlays);
+  });
+
+  it("trims content that falls outside a shortened scene", () => {
+    const project = createR4FixtureProject();
+    const scene = project.scenes[1];
+    if (!scene) throw new Error("Missing scene");
+    const next = setSceneDuration(project, scene.id, sceneMinimumFrames(scene));
+    expect(
+      next.scenes[1]?.textOverlays.every(
+        (overlay) =>
+          overlay.startFrame < (next.scenes[1]?.durationInFrames ?? 0),
+      ),
+    ).toBe(true);
+  });
+
   it("reorders scenes and recalculates starts", () => {
     const project = createR4FixtureProject();
     const next = reorderScenes(project, 0, 1);

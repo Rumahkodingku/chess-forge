@@ -159,6 +159,16 @@ export function resetSceneField(
             moment && project.gameSnapshot
               ? project.gameSnapshot.moves[moment.ply - 1]
               : undefined;
+          const moveIndex =
+            moment && scene.moveRange
+              ? moment.ply - scene.moveRange.fromPly
+              : 0;
+          const startFrame = moment
+            ? template.style.timing.leadInFrames +
+              Math.max(0, moveIndex) *
+                (template.style.timing.moveDurationFrames +
+                  template.style.timing.gapFrames)
+            : 0;
           next = {
             ...scene,
             annotations: move
@@ -169,8 +179,11 @@ export function resetSceneField(
                     from: move.uci.slice(0, 2),
                     to: move.uci.slice(2, 4),
                     color: template.style.effects.glow ? "brand" : "red",
-                    startFrame: 0,
-                    durationInFrames: scene.durationInFrames,
+                    startFrame,
+                    durationInFrames: Math.max(
+                      1,
+                      scene.durationInFrames - startFrame,
+                    ),
                     opacity: 1,
                   },
                 ]

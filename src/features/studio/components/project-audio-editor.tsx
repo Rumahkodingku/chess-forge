@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   createAssetRepository,
-  createProjectRepository,
   openChessForgeDatabase,
 } from "@/features/storage/db";
 import {
@@ -70,47 +69,12 @@ export function ProjectAudioEditor({
   function removeTrack(id: string) {
     const track = project.audioTracks.find((item) => item.id === id);
     if (!track) return;
-    const assetId =
-      track.source.type === "asset" ? track.source.assetId : undefined;
-    const stillReferenced =
-      assetId !== undefined &&
-      project.audioTracks.some(
-        (item) =>
-          item.id !== id &&
-          item.source.type === "asset" &&
-          item.source.assetId === assetId,
-      );
     onChange((current) => ({
       ...current,
       audioTracks: current.audioTracks.filter((item) => item.id !== id),
-      assets:
-        assetId && !stillReferenced
-          ? current.assets.filter((asset) => asset.id !== assetId)
-          : current.assets,
     }));
-    if (assetId && !stillReferenced) {
-      void (async () => {
-        try {
-          const db = await openChessForgeDatabase();
-          const projects = await createProjectRepository(db).list();
-          const usedElsewhere = projects.some(
-            (item) =>
-              item.id !== project.id &&
-              (item.assets.some((asset) => asset.id === assetId) ||
-                item.audioTracks.some(
-                  (track) =>
-                    track.source.type === "asset" &&
-                    track.source.assetId === assetId,
-                )),
-          );
-          if (!usedElsewhere) {
-            await createAssetRepository(db).delete(assetId);
-          }
-        } catch (error) {
-          console.warn("Audio asset cleanup failed.", error);
-        }
-      })();
-    }
+    // shortcut: unused audio blobs remain until a future media cleanup.
+    // Deleting here would break undo, which can restore the track.
   }
 
   async function upload(file: File) {

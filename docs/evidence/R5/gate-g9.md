@@ -14,7 +14,7 @@ R1, R2, R3, and R4 remain green.
 
 | Check | Result |
 | --- | --- |
-| `npm run check:all` | PASS, 49 test files and 229 unit/integration tests |
+| `npm run check:all` | PASS, 49 test files and 231 unit/integration tests |
 | `npm run build` | PASS |
 | `npm run test:e2e` | PASS, 26 browser tests |
 | `npm run test:e2e:prod` | PASS, 5 production tests |
