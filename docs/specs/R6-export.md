@@ -48,19 +48,19 @@ R6 must not create a second renderer. Preview and export continue to use `Projec
 
 ### 2.3 Approved decisions
 
-| Topic | Decision |
-|---|---|
-| Aspect ratio | Project-level. Export displays it and may change the project canvas through the undoable canvas operation |
-| Frame rate | Project-level. Export may change it with a warning; scene frame counts stay unchanged |
-| Resolution | 720p and 1080p only |
-| Quality | low, medium, high mapped to Remotion bitrate presets |
-| Format | MP4, WebM VP9, WebM VP8; auto-select the best supported |
-| Capability check | Per format at the active resolution and output target |
-| Large output | OPFS `web-fs` at 60 seconds or longer, arraybuffer fallback |
-| Config persistence | Session-only, initialized from application settings |
-| Validation | Mediabunny in the browser; ffprobe on the downloaded file in E2E |
-| Editor during export | Render a frozen project snapshot; editing continues |
-| Leaving page | Browser unload warns; studio unmount aborts and releases results |
+| Topic                | Decision                                                                                                  |
+| -------------------- | --------------------------------------------------------------------------------------------------------- |
+| Aspect ratio         | Project-level. Export displays it and may change the project canvas through the undoable canvas operation |
+| Frame rate           | Project-level. Export may change it with a warning; scene frame counts stay unchanged                     |
+| Resolution           | 720p and 1080p only                                                                                       |
+| Quality              | low, medium, high mapped to Remotion bitrate presets                                                      |
+| Format               | MP4, WebM VP9, WebM VP8; auto-select the best supported                                                   |
+| Capability check     | Per format at the active resolution and output target                                                     |
+| Large output         | OPFS `web-fs` at 60 seconds or longer, arraybuffer fallback                                               |
+| Config persistence   | Session-only, initialized from application settings                                                       |
+| Validation           | Mediabunny in the browser; ffprobe on the downloaded file in E2E                                          |
+| Editor during export | Render a frozen project snapshot; editing continues                                                       |
+| Leaving page         | Browser unload warns; studio unmount aborts and releases results                                          |
 
 ---
 
@@ -123,12 +123,12 @@ interface ExportConfig {
 
 ### 4.3 Resolution map
 
-| Aspect | 720p | 1080p |
-|---|---|---|
-| 9:16 | 720 x 1280 | 1080 x 1920 |
-| 16:9 | 1280 x 720 | 1920 x 1080 |
-| 1:1 | 720 x 720 | 1080 x 1080 |
-| 4:5 | 720 x 900 | 1080 x 1350 |
+| Aspect | 720p       | 1080p       |
+| ------ | ---------- | ----------- |
+| 9:16   | 720 x 1280 | 1080 x 1920 |
+| 16:9   | 1280 x 720 | 1920 x 1080 |
+| 1:1    | 720 x 720  | 1080 x 1080 |
+| 4:5    | 720 x 900  | 1080 x 1350 |
 
 Rules:
 
@@ -142,10 +142,10 @@ Rules:
 Quality maps to Remotion `WebRendererQuality`:
 
 | Quality | Video bitrate | Audio bitrate |
-|---|---|---|
-| low | `low` | `low` |
-| medium | `medium` | `medium` |
-| high | `high` | `high` |
+| ------- | ------------- | ------------- |
+| low     | `low`         | `low`         |
+| medium  | `medium`      | `medium`      |
+| high    | `high`        | `high`        |
 
 No numeric bitrate input is exposed in R6.
 
@@ -206,10 +206,10 @@ canRenderMediaOnWeb({
 ### 5.2 Options
 
 | Order | Container | Video | Audio |
-|---|---|---|---|
-| 1 | MP4 | H.264 | AAC |
-| 2 | WebM | VP9 | Opus |
-| 3 | WebM | VP8 | Opus |
+| ----- | --------- | ----- | ----- |
+| 1     | MP4       | H.264 | AAC   |
+| 2     | WebM      | VP9   | Opus  |
+| 3     | WebM      | VP8   | Opus  |
 
 ### 5.3 Selection rules
 
@@ -331,21 +331,21 @@ max(0.25 seconds, 2 / project.frameRate)
 
 ## 8. Error handling
 
-| Case | Required behaviour |
-|---|---|
-| No supported format | Disable export, list reasons, suggest WebM or Chrome/Edge |
-| Capability check fails | Visible error with retry |
-| Export start with no scenes | Validation error, project untouched |
-| Render failure | `ExportError` stage `render`, project untouched |
-| OPFS failure | Fall back to arraybuffer when safe, warning |
-| Arraybuffer memory failure | `ExportError` stage `storage`, suggest 720p or shorter project |
-| Validation failure | `ExportError` stage `validation`, no download |
-| Cancel | `cancelled` state, no error |
-| Page close during render | Browser warning |
-| Studio unmount during render | Abort and cleanup |
-| Project over 15 minutes | Disable export with duration message |
-| Missing audio asset | Warning, render continues without that asset |
-| Unsupported audio codec | Capability issue, choose supported format |
+| Case                         | Required behaviour                                             |
+| ---------------------------- | -------------------------------------------------------------- |
+| No supported format          | Disable export, list reasons, suggest WebM or Chrome/Edge      |
+| Capability check fails       | Visible error with retry                                       |
+| Export start with no scenes  | Validation error, project untouched                            |
+| Render failure               | `ExportError` stage `render`, project untouched                |
+| OPFS failure                 | Fall back to arraybuffer when safe, warning                    |
+| Arraybuffer memory failure   | `ExportError` stage `storage`, suggest 720p or shorter project |
+| Validation failure           | `ExportError` stage `validation`, no download                  |
+| Cancel                       | `cancelled` state, no error                                    |
+| Page close during render     | Browser warning                                                |
+| Studio unmount during render | Abort and cleanup                                              |
+| Project over 15 minutes      | Disable export with duration message                           |
+| Missing audio asset          | Warning, render continues without that asset                   |
+| Unsupported audio codec      | Capability issue, choose supported format                      |
 
 ---
 
@@ -552,17 +552,17 @@ Maps to R6-T09.
 
 ## 14. Risks
 
-| Risk | Mitigation |
-|---|---|
-| Playwright cannot encode MP4 | Validate WebM in E2E; validate MP4 manually in Chrome stable |
-| OPFS unavailable | Capability check and arraybuffer fallback |
-| Long export memory pressure | 60-second OPFS threshold and 15-minute cap |
-| FPS change surprises users | Warning, undo, and duration display |
-| Validation rejects playable files | Documented tolerance and actionable error |
-| Audio asset URL revoked too early | Keep URLs until result clear or unmount |
-| Cancellation leaves temp files | Abort, clear refs, revoke URLs, rely on renderer OPFS cleanup |
-| Autosave changes project during render | Render a frozen snapshot |
-| R1 export breaks | Preserve labels and default WebM fallback |
+| Risk                                   | Mitigation                                                    |
+| -------------------------------------- | ------------------------------------------------------------- |
+| Playwright cannot encode MP4           | Validate WebM in E2E; validate MP4 manually in Chrome stable  |
+| OPFS unavailable                       | Capability check and arraybuffer fallback                     |
+| Long export memory pressure            | 60-second OPFS threshold and 15-minute cap                    |
+| FPS change surprises users             | Warning, undo, and duration display                           |
+| Validation rejects playable files      | Documented tolerance and actionable error                     |
+| Audio asset URL revoked too early      | Keep URLs until result clear or unmount                       |
+| Cancellation leaves temp files         | Abort, clear refs, revoke URLs, rely on renderer OPFS cleanup |
+| Autosave changes project during render | Render a frozen snapshot                                      |
+| R1 export breaks                       | Preserve labels and default WebM fallback                     |
 
 ---
 
