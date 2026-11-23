@@ -86,6 +86,7 @@ Known warning: Mediabunny loaded twice (pre-existing R0 warning)
 - Regeneration from the Templates page is outside the studio undo session; use the studio Apply template action for undoable regeneration.
 - Track rows present spans; timing is edited in the inspector.
 - Audio upload validates duration with browser metadata, not a server-side decoder.
+- Unused uploaded audio blobs are retained because undo can restore a deleted track; media cleanup is deferred.
 - Invalid custom templates are skipped with a console warning.
 - Mobile uses the same stacked editor; no separate mobile authoring layout.
 - `next start` still warns because the production build uses standalone output.
