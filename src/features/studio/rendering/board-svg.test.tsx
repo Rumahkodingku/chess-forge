@@ -28,6 +28,7 @@ describe("BoardSvg", () => {
     expect(html).toContain("#f0d9b5");
     expect(html).toContain("#b58863");
     expect(html).toContain("Classic board");
+    expect(html).toContain("http://localhost:3000/pieces/cburnett/wK.svg");
   });
 
   it("renders moving pieces, annotations, and checkmate emphasis", () => {

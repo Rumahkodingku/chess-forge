@@ -80,7 +80,9 @@ function isBoardSquare(square: string | undefined): square is string {
 }
 
 function pieceFile(color: Color, type: PieceSymbol) {
-  return `/pieces/cburnett/${color}${type.toUpperCase()}.svg`;
+  const path = `/pieces/cburnett/${color}${type.toUpperCase()}.svg`;
+  if (typeof window === "undefined") return path;
+  return new URL(path, window.location.origin).href;
 }
 
 function annotationMarkerId(annotation: Annotation): string {
