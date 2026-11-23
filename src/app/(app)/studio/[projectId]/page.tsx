@@ -4,11 +4,9 @@ import type { PlayerRef } from "@remotion/player";
 import {
   ArrowLeft,
   Clapperboard,
-  Download,
   Loader2,
   Redo2,
   Save,
-  Square,
   TriangleAlert,
   Undo2,
 } from "lucide-react";
@@ -29,21 +27,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ASPECT_PRESETS } from "@/features/settings/types";
 import {
   createAssetRepository,
   createProjectRepository,
   openChessForgeDatabase,
 } from "@/features/storage/db";
-import { formatBytes } from "@/features/storage/use-storage-status";
+import { ExportPanel } from "@/features/studio/components/export-panel";
 import { ProjectAudioEditor } from "@/features/studio/components/project-audio-editor";
 import { SceneInspector } from "@/features/studio/components/scene-inspector";
 import { TimelinePanel } from "@/features/studio/components/timeline-panel";
@@ -53,6 +43,7 @@ import {
   duplicateScene,
   reorderScenes,
   setCanvas,
+  setFrameRate,
   setSceneDuration,
 } from "@/features/studio/editing/project-operations";
 import {
@@ -62,8 +53,6 @@ import {
 } from "@/features/studio/editing/scene-editing";
 import { useProjectAutosave } from "@/features/studio/editing/use-project-autosave";
 import { useProjectEditor } from "@/features/studio/editing/use-project-editor";
-import { projectFileName } from "@/features/studio/file-name";
-import { exportProject } from "@/features/studio/rendering/export-runner";
 import { ProjectComposition } from "@/features/studio/rendering/project-composition";
 import { validateTextOverlays } from "@/features/studio/rendering/text-safety";
 import { projectDurationInFrames } from "@/features/studio/rendering/timeline";
@@ -88,7 +77,6 @@ const ProjectPlayer = ProjectComposition as unknown as ComponentType<
 
 type LoadState = "loading" | "ready" | "invalid" | "missing" | "error";
 type SaveState = "idle" | "saving" | "saved" | "error";
-type ExportState = "idle" | "exporting" | "done" | "cancelled" | "error";
 
 export default function StudioProjectPage() {
   const params = useParams<{ projectId: string }>();
@@ -101,22 +89,12 @@ export default function StudioProjectPage() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const [applyTemplateOpen, setApplyTemplateOpen] = useState(false);
-  const [format, setFormat] = useState<"webm" | "mp4">("webm");
-  const [exportState, setExportState] = useState<ExportState>("idle");
-  const [progress, setProgress] = useState(0);
-  const [exportError, setExportError] = useState<string | null>(null);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
-  const [resultSize, setResultSize] = useState<number | null>(null);
-  const [resultFormat, setResultFormat] = useState<"webm" | "mp4" | null>(null);
-  const [renderMs, setRenderMs] = useState<number | null>(null);
   const [selectedSceneIndex, setSelectedSceneIndex] = useState(0);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [resolvedAudioAssets, setResolvedAudioAssets] = useState<
     Record<string, string>
   >({});
   const [audioWarnings, setAudioWarnings] = useState<string[]>([]);
-  const controllerRef = useRef<AbortController | null>(null);
-  const urlRef = useRef<string | null>(null);
   const playerRef = useRef<PlayerRef>(null);
   const pendingFrameRef = useRef<number | null>(null);
   const [playerInstance, setPlayerInstance] = useState<PlayerRef | null>(null);
@@ -236,12 +214,6 @@ export default function StudioProjectPage() {
   }, [audioAssetKey]);
 
   useEffect(() => {
-    return () => {
-      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
     if (!projectId) return;
     setSelectedSceneIndex(0);
     setCurrentFrame(0);
@@ -355,17 +327,6 @@ export default function StudioProjectPage() {
     );
   }, [project]);
 
-  function clearResult() {
-    if (urlRef.current) {
-      URL.revokeObjectURL(urlRef.current);
-      urlRef.current = null;
-    }
-    setResultUrl(null);
-    setResultSize(null);
-    setResultFormat(null);
-    setRenderMs(null);
-  }
-
   function seekToFrame(frame: number) {
     if (playerRef.current) {
       playerRef.current.seekTo(frame);
@@ -429,52 +390,6 @@ export default function StudioProjectPage() {
     }
   }
 
-  async function renderProject() {
-    if (!project || !project.scenes.length) return;
-    clearResult();
-    setExportError(null);
-    setProgress(0);
-    setExportState("exporting");
-    const controller = new AbortController();
-    controllerRef.current = controller;
-    const started = performance.now();
-    try {
-      const result = await exportProject({
-        project,
-        resolvedAudioAssets,
-        config: {
-          container: format,
-          videoCodec: format === "mp4" ? "h264" : "vp9",
-          audioCodec: format === "mp4" ? "aac" : "opus",
-          resolution: "1080p",
-          quality: "medium",
-          includeAudio: true,
-          fileName: "export",
-        },
-        signal: controller.signal,
-        onProgress: (nextProgress) => setProgress(nextProgress.percent),
-      });
-      const url = URL.createObjectURL(result.blob);
-      urlRef.current = url;
-      setResultUrl(url);
-      setResultSize(result.blob.size);
-      setResultFormat(format);
-      setRenderMs(Math.round(performance.now() - started));
-      setProgress(100);
-      setExportState("done");
-    } catch (error) {
-      if (controller.signal.aborted) {
-        setExportState("cancelled");
-        setExportError("Export cancelled. The project was not changed.");
-      } else {
-        setExportState("error");
-        setExportError(toErrorMessage(error));
-      }
-    } finally {
-      controllerRef.current = null;
-    }
-  }
-
   if (loadState === "invalid" || loadState === "missing") {
     return (
       <div className="space-y-6">
@@ -533,8 +448,6 @@ export default function StudioProjectPage() {
     );
   }
 
-  const exporting = exportState === "exporting";
-  const downloadName = projectFileName(project.name, resultFormat ?? format);
   const warnings = [...audioWarnings, ...textWarnings, ...annotationWarnings];
 
   return (
@@ -888,115 +801,16 @@ export default function StudioProjectPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/80 bg-surface-1">
-            <CardHeader>
-              <CardTitle className="text-[15px]">Export</CardTitle>
-              <CardDescription>
-                WebM is required. MP4 depends on the codecs available in this
-                browser.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="studio-format"
-                  className="text-[11px] font-medium text-muted-foreground"
-                >
-                  Output format
-                </label>
-                <Select
-                  value={format}
-                  onValueChange={(value) => setFormat(value as "webm" | "mp4")}
-                  disabled={exporting}
-                >
-                  <SelectTrigger id="studio-format" className="h-10 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="webm">WebM / VP9 / Opus</SelectItem>
-                    <SelectItem value="mp4">MP4 / H.264 / AAC</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  onClick={() => void renderProject()}
-                  disabled={!project.scenes.length || exporting}
-                  className="h-10 px-4"
-                >
-                  {exporting ? (
-                    <Loader2 aria-hidden className="size-4 animate-spin" />
-                  ) : (
-                    <Download aria-hidden className="size-4" />
-                  )}
-                  {exporting ? "Exporting" : "Export video"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => controllerRef.current?.abort()}
-                  disabled={!exporting}
-                  className="h-10 border-border/80 bg-transparent px-4"
-                >
-                  <Square aria-hidden className="size-4" />
-                  Cancel
-                </Button>
-              </div>
-
-              {exporting ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span>Rendering frames</span>
-                    <span className="tabular-nums">{progress}%</span>
-                  </div>
-                  <Progress value={progress} className="h-1.5" />
-                </div>
-              ) : null}
-
-              <p
-                aria-live="polite"
-                className="text-[11px] text-muted-foreground"
-              >
-                {exportState === "idle"
-                  ? "Ready to render."
-                  : exportState === "done"
-                    ? "Export complete."
-                    : exportState === "cancelled"
-                      ? "Export cancelled."
-                      : exportState === "error"
-                        ? "Export failed."
-                        : "Rendering in the browser."}
-              </p>
-
-              {exportError ? (
-                <p
-                  role="alert"
-                  className="text-[11px] leading-relaxed text-destructive"
-                >
-                  {exportError}
-                </p>
-              ) : null}
-
-              {resultUrl ? (
-                <div className="rounded-lg border border-brand/30 bg-brand/10 p-3">
-                  <p className="text-[12px] font-medium text-foreground">
-                    Output ready
-                  </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    {resultSize ? formatBytes(resultSize) : "Unknown size"}
-                    {renderMs ? ` · ${(renderMs / 1000).toFixed(1)} s` : ""}
-                  </p>
-                  <Button asChild className="mt-3 h-9 px-3">
-                    <a href={resultUrl} download={downloadName}>
-                      <Download aria-hidden className="size-4" />
-                      Download {(resultFormat ?? format).toUpperCase()}
-                    </a>
-                  </Button>
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
+          <ExportPanel
+            project={project}
+            resolvedAudioAssets={resolvedAudioAssets}
+            onCanvasChange={(aspectRatio) =>
+              editor.update((current) => setCanvas(current, aspectRatio))
+            }
+            onFrameRateChange={(frameRate) =>
+              editor.update((current) => setFrameRate(current, frameRate))
+            }
+          />
         </div>
       </div>
 

@@ -87,6 +87,7 @@ test("R1 walking skeleton imports, analyses, forges, exports, and reopens", asyn
     timeout: 30_000,
   });
 
+  await page.getByRole("radio", { name: /WebM \/ VP9 \/ Opus/ }).check();
   await page.getByRole("button", { name: "Export video" }).click();
   await expect(page.getByRole("link", { name: "Download WebM" })).toBeVisible({
     timeout: 180_000,

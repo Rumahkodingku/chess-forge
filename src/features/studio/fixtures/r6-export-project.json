@@ -1,0 +1,204 @@
+{
+  "id": "bd677b03-5339-4372-826e-17ad5ad1bffe",
+  "name": "White vs Black",
+  "sourceGameId": "b085f22f-641f-44d9-8ac5-c96497dd1c6f",
+  "templateId": "r1-skeleton",
+  "projectVersion": 3,
+  "template": null,
+  "canvas": {
+    "aspectRatio": "9:16",
+    "width": 1080,
+    "height": 1920
+  },
+  "frameRate": 30,
+  "scenes": [
+    {
+      "id": "de38821a-525c-475a-9922-0c95b44fe4d5",
+      "type": "move",
+      "startFrame": 0,
+      "durationInFrames": 90,
+      "moveRange": {
+        "fromPly": 1,
+        "toPly": 1
+      },
+      "boardState": {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "orientation": "w",
+        "theme": "forge",
+        "coordinates": true
+      },
+      "timing": {
+        "leadInFrames": 10,
+        "moveDurationFrames": 45,
+        "gapFrames": 0,
+        "holdFrames": 35,
+        "easing": "easeInOut"
+      },
+      "camera": {
+        "keyframes": [
+          {
+            "frame": 0,
+            "zoom": 1,
+            "x": 0,
+            "y": 0,
+            "easing": "easeInOut"
+          }
+        ]
+      },
+      "annotations": [],
+      "textOverlays": [
+        {
+          "id": "5fd28740-8f56-4d99-bfaf-0619e4a42ee1",
+          "kind": "move-label",
+          "text": "1. e4",
+          "font": "display",
+          "fontSize": 64,
+          "color": "foreground",
+          "align": "center",
+          "position": "bottom",
+          "x": 0,
+          "y": 0,
+          "maxWidth": 80,
+          "background": false,
+          "startFrame": 0,
+          "durationInFrames": 90
+        }
+      ],
+      "effects": {
+        "lastMoveHighlight": true,
+        "checkIndicator": true,
+        "captureEmphasis": true,
+        "checkmateEmphasis": true,
+        "glow": false,
+        "focus": false
+      },
+      "focusSquares": [],
+      "audioEvents": [
+        {
+          "id": "db669bd9-1adb-4266-8b7b-da9659523334",
+          "trigger": "move",
+          "frameOffset": 0,
+          "volume": 0.5,
+          "muted": false
+        }
+      ],
+      "overrides": {},
+      "schemaVersion": 2
+    }
+  ],
+  "gameSnapshot": {
+    "metadata": {
+      "white": "White",
+      "black": "Black",
+      "result": "*",
+      "event": "R1 walking skeleton fixture",
+      "site": "local",
+      "date": "2024.01.01",
+      "round": "1",
+      "timeControl": "300+0"
+    },
+    "initialFen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "moves": [
+      {
+        "ply": 1,
+        "fullMoveNumber": 1,
+        "color": "w",
+        "san": "e4",
+        "uci": "e2e4",
+        "fenBefore": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "fenAfter": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+      },
+      {
+        "ply": 2,
+        "fullMoveNumber": 1,
+        "color": "b",
+        "san": "e5",
+        "uci": "e7e5",
+        "fenBefore": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+        "fenAfter": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"
+      },
+      {
+        "ply": 3,
+        "fullMoveNumber": 2,
+        "color": "w",
+        "san": "Nf3",
+        "uci": "g1f3",
+        "fenBefore": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+        "fenAfter": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
+      },
+      {
+        "ply": 4,
+        "fullMoveNumber": 2,
+        "color": "b",
+        "san": "Nc6",
+        "uci": "b8c6",
+        "fenBefore": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+        "fenAfter": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3"
+      },
+      {
+        "ply": 5,
+        "fullMoveNumber": 3,
+        "color": "w",
+        "san": "Bb5",
+        "uci": "f1b5",
+        "fenBefore": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+        "fenAfter": "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3"
+      },
+      {
+        "ply": 6,
+        "fullMoveNumber": 3,
+        "color": "b",
+        "san": "a6",
+        "uci": "a7a6",
+        "fenBefore": "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
+        "fenAfter": "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4"
+      },
+      {
+        "ply": 7,
+        "fullMoveNumber": 4,
+        "color": "w",
+        "san": "Ba4",
+        "uci": "b5a4",
+        "fenBefore": "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4",
+        "fenAfter": "r1bqkbnr/1ppp1ppp/p1n5/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 1 4"
+      },
+      {
+        "ply": 8,
+        "fullMoveNumber": 4,
+        "color": "b",
+        "san": "Nf6",
+        "uci": "g8f6",
+        "fenBefore": "r1bqkbnr/1ppp1ppp/p1n5/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 1 4",
+        "fenAfter": "r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 5"
+      },
+      {
+        "ply": 9,
+        "fullMoveNumber": 5,
+        "color": "w",
+        "san": "O-O",
+        "uci": "e1g1",
+        "fenBefore": "r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 5",
+        "fenAfter": "r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 3 5"
+      },
+      {
+        "ply": 10,
+        "fullMoveNumber": 5,
+        "color": "b",
+        "san": "Be7",
+        "uci": "f8e7",
+        "fenBefore": "r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 3 5",
+        "fenAfter": "r1bqk2r/1pppbppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 4 6"
+      }
+    ]
+  },
+  "tracks": {
+    "text": [],
+    "annotation": [],
+    "audio": []
+  },
+  "audioTracks": [],
+  "assets": [],
+  "createdAt": "2026-11-23T12:14:53.378Z",
+  "updatedAt": "2026-11-23T12:14:53.378Z",
+  "schemaVersion": 3
+}
