@@ -507,6 +507,7 @@ export function generateProject(input: GenerateProjectInput): VideoProject {
 export function defaultSelectionForTemplate(
   template: Template,
   summary?: GameSummary | null,
+  moveCount = Number.MAX_SAFE_INTEGER,
 ): SourceSelection {
   const rules = template.sceneRules;
   if (rules.defaultSourceMode === "moments") {
@@ -519,14 +520,19 @@ export function defaultSelectionForTemplate(
       trailInPlies: rules.trailInPlies,
     };
   }
-  if (
-    rules.defaultSourceMode === "range" &&
-    template.id === "opening-tutorial"
-  ) {
-    return { mode: "range", fromPly: 1, toPly: 10 };
-  }
   if (rules.defaultSourceMode === "range") {
-    return { mode: "range", fromPly: 1, toPly: 6 };
+    if (template.id === "opening-tutorial") {
+      return {
+        mode: "range",
+        fromPly: 1,
+        toPly: Math.min(10, Math.max(1, moveCount)),
+      };
+    }
+    return {
+      mode: "range",
+      fromPly: Math.max(1, moveCount - 5),
+      toPly: Math.max(1, moveCount),
+    };
   }
   return { mode: "full" };
 }

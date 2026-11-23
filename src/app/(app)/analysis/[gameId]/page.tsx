@@ -8,6 +8,7 @@ import {
   ChevronLast,
   ChevronLeft,
   ChevronRight,
+  Clapperboard,
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
@@ -78,6 +79,7 @@ import {
   createSettingsRepository,
   openChessForgeDatabase,
 } from "@/features/storage/db";
+import { CreateProjectDialog } from "@/features/studio/components/create-project-dialog";
 import { createWalkingSkeletonProject } from "@/features/studio/project-factory";
 import { toErrorMessage } from "@/lib/errors";
 import { isUuid } from "@/lib/validation";
@@ -132,6 +134,7 @@ export default function AnalysisGamePage() {
   const [decisionBusy, setDecisionBusy] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const engineRef = useRef<BrowserStockfishEngine | null>(null);
   const unsubscribeStateRef = useRef<(() => void) | null>(null);
   const unsubscribeProgressRef = useRef<(() => void) | null>(null);
@@ -979,7 +982,33 @@ export default function AnalysisGamePage() {
 
           <Card className="border-border/80 bg-surface-1">
             <CardHeader>
-              <CardTitle className="text-[15px]">Forge a scene</CardTitle>
+              <CardTitle className="text-[15px]">Create a video</CardTitle>
+              <CardDescription>
+                Build a templated sequence from the full game or selected
+                moments.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="h-10 px-4"
+              >
+                <Clapperboard aria-hidden className="size-4" />
+                Create video
+              </Button>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Opens the template and source picker. The project saves before
+                the studio opens.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/80 bg-surface-1">
+            <CardHeader>
+              <CardTitle className="text-[15px]">
+                Quick 3-second scene
+              </CardTitle>
               <CardDescription>
                 One move, three seconds, 9:16, with the move sound.
               </CardDescription>
@@ -987,6 +1016,7 @@ export default function AnalysisGamePage() {
             <CardContent className="space-y-3">
               <Button
                 type="button"
+                variant="outline"
                 onClick={() => void createScene()}
                 disabled={selectedPly === 0 || creating}
                 className="h-10 px-4"
@@ -1022,6 +1052,16 @@ export default function AnalysisGamePage() {
           </Card>
         </div>
       </div>
+
+      {game ? (
+        <CreateProjectDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          game={game}
+          summary={summary}
+          onCreated={(project) => router.push(`/studio/${project.id}`)}
+        />
+      ) : null}
     </div>
   );
 }
