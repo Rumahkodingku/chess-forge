@@ -467,6 +467,10 @@ The UI must label it `Candidate Brilliant`, store `pending`, `accepted`, or `rej
 
 **Entry criteria:** Gate G7 passes.
 
+**Spec:** `docs/specs/R4-animation-core.md`.
+
+**Execution status (2026-11-23):** Specification ready. Implementation has not started.
+
 ### 9.1 Tasks
 
 | ID     | Task                                                                                                                                   | Depends on       | Complexity | Acceptance criteria                    |
