@@ -32,7 +32,10 @@ import {
   initialFormState,
   type ProjectSourceMode,
 } from "@/features/studio/creation/create-project-form";
-import { generateProject } from "@/features/studio/creation/generate-project";
+import {
+  defaultSelectionForTemplate,
+  generateProject,
+} from "@/features/studio/creation/generate-project";
 import type { VideoProject } from "@/features/studio/scene/scene.types";
 import { BUILT_IN_TEMPLATES } from "@/features/templates/builtins";
 import type { Template } from "@/features/templates/types";
@@ -100,13 +103,21 @@ export function CreateProjectDialog({
 
   useEffect(() => {
     if (!template) return;
-    setForm(
-      initialFormState(summary, game.moves.length, {
-        sourceMode: template.sceneRules.defaultSourceMode,
-        leadInPlies: template.sceneRules.leadInPlies,
-        trailInPlies: template.sceneRules.trailInPlies,
-      }),
+    const defaults = defaultSelectionForTemplate(
+      template,
+      summary,
+      game.moves.length,
     );
+    const next = initialFormState(summary, game.moves.length, {
+      sourceMode: defaults.mode,
+      leadInPlies: template.sceneRules.leadInPlies,
+      trailInPlies: template.sceneRules.trailInPlies,
+    });
+    if (defaults.mode === "range") {
+      next.fromPly = defaults.fromPly;
+      next.toPly = defaults.toPly;
+    }
+    setForm(next);
   }, [game.moves.length, summary, template]);
 
   const moments = summary?.criticalMoments ?? [];
@@ -223,6 +234,12 @@ export function CreateProjectDialog({
                       checked={form.moments.some(
                         (selected) => selected.ply === moment.ply,
                       )}
+                      disabled={
+                        form.moments.length >= 3 &&
+                        !form.moments.some(
+                          (selected) => selected.ply === moment.ply,
+                        )
+                      }
                       onChange={(event) =>
                         toggleMoment(moment.ply, event.target.checked)
                       }

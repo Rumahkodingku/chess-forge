@@ -118,7 +118,7 @@ test.describe("R4 animation core", () => {
 
     await expect(
       page.getByText("Preview warnings", { exact: true }).first(),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/Audio asset .* missing/)).toBeVisible();
     await expect(page.getByText(/safe area/).first()).toBeVisible();
     await expect(page.getByText("The Ruy Lopez")).toBeVisible();

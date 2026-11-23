@@ -14,7 +14,11 @@ import {
   applicationSettingsSchema,
 } from "@/features/settings/types";
 import { normalizeProject } from "@/features/studio/scene/project-normalization";
-import type { Scene, VideoProject } from "@/features/studio/scene/scene.types";
+import {
+  type Scene,
+  type VideoProject,
+  videoProjectSchema,
+} from "@/features/studio/scene/scene.types";
 import { normalizeTemplate } from "@/features/templates/normalization";
 import { type Template, templateSchema } from "@/features/templates/types";
 import {
@@ -352,10 +356,26 @@ export function createProjectRepository(
     },
     list: async () => {
       const records = await db.getAll("projects");
-      return records.map(normalizeStored);
+      const projects: VideoProject[] = [];
+      for (const record of records) {
+        try {
+          projects.push(normalizeStored(record));
+        } catch {
+          console.warn("A stored project is invalid and was skipped.");
+        }
+      }
+      return projects;
     },
     save: async (project) => {
-      await db.put("projects", normalizeStored(project));
+      try {
+        parseStored(project, videoProjectSchema, "project");
+        await db.put("projects", normalizeProject(project));
+      } catch {
+        throw new ValidationError(
+          "Project changes could not be saved.",
+          "Check the scene timing and fields, then retry.",
+        );
+      }
     },
     delete: (id) => db.delete("projects", id),
   };

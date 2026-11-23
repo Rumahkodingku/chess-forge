@@ -66,6 +66,35 @@ export function ProjectAudioEditor({
     }));
   }
 
+  function removeTrack(id: string) {
+    const track = project.audioTracks.find((item) => item.id === id);
+    if (!track) return;
+    const assetId =
+      track.source.type === "asset" ? track.source.assetId : undefined;
+    const stillReferenced =
+      assetId !== undefined &&
+      project.audioTracks.some(
+        (item) =>
+          item.id !== id &&
+          item.source.type === "asset" &&
+          item.source.assetId === assetId,
+      );
+    onChange((current) => ({
+      ...current,
+      audioTracks: current.audioTracks.filter((item) => item.id !== id),
+      assets:
+        assetId && !stillReferenced
+          ? current.assets.filter((asset) => asset.id !== assetId)
+          : current.assets,
+    }));
+    if (assetId && !stillReferenced) {
+      void (async () => {
+        const db = await openChessForgeDatabase();
+        await createAssetRepository(db).delete(assetId);
+      })();
+    }
+  }
+
   async function upload(file: File) {
     setUploading(true);
     setError(null);
@@ -181,14 +210,7 @@ export function ProjectAudioEditor({
                   size="icon-sm"
                   variant="ghost"
                   aria-label="Delete audio track"
-                  onClick={() =>
-                    onChange((current) => ({
-                      ...current,
-                      audioTracks: current.audioTracks.filter(
-                        (item) => item.id !== track.id,
-                      ),
-                    }))
-                  }
+                  onClick={() => removeTrack(track.id)}
                 >
                   <Trash2 className="size-3.5 text-destructive" />
                 </Button>

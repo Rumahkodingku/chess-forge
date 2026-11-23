@@ -59,7 +59,7 @@ export function momentBlocks(
   const merged: SourceBlock[] = [];
   for (const block of blocks) {
     const previous = merged.at(-1);
-    if (previous && block.fromPly <= previous.toPly + 1) {
+    if (previous && block.fromPly <= previous.toPly) {
       previous.toPly = Math.max(previous.toPly, block.toPly);
       if (block.moment && block.moment.ply > (previous.moment?.ply ?? 0)) {
         previous.moment = block.moment;

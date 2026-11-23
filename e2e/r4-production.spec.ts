@@ -41,7 +41,7 @@ test("R4 production preview and scene seek work at 390 px", async ({
   const sceneButton = page.getByRole("button", { name: /03 move/ });
   await sceneButton.click();
   await expect(sceneButton).toHaveAttribute("aria-current", "true");
-  await expect(page.getByLabel("Frame")).toHaveValue("165");
+  await expect(page.locator("#studio-frame")).toHaveValue("165");
 
   await page.setViewportSize({ width: 390, height: 844 });
   const overflow = await page.evaluate(

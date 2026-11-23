@@ -17,5 +17,6 @@
 | [0013](0013-game-import-and-replay.md) | Game import and replay |
 | [0014](0014-analysis-pipeline.md) | Analysis pipeline and heuristics |
 | [0015](0015-animation-core.md) | Animation core |
+| [0016](0016-video-studio.md) | Video studio |
 
 Add a new ADR before changing an accepted decision. Keep the status line current.

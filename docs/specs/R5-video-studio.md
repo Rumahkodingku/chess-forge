@@ -1,7 +1,7 @@
 # R5 — Video Studio
 
 **Spec version:** 1.0
-**Status:** Ready for implementation
+**Status:** Gate-verified
 **Phase:** R5
 **PRD mapping:** PH-4; §5.4, §5.5, §6.4, §6.6, §6.7, §6.9.2
 **Acceptance criteria:** AC-05, AC-06

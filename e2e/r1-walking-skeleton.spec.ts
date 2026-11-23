@@ -102,7 +102,7 @@ test("R1 walking skeleton imports, analyses, forges, exports, and reopens", asyn
   expect(fileStat.size).toBeGreaterThan(10_000);
 
   await page.getByRole("button", { name: "Save project" }).click();
-  await expect(page.getByText("Saved to IndexedDB.")).toBeVisible();
+  await expect(page.getByText("Autosaved to IndexedDB.")).toBeVisible();
 
   await page.reload();
   await expect(page.getByText("Project details")).toBeVisible({
@@ -111,7 +111,7 @@ test("R1 walking skeleton imports, analyses, forges, exports, and reopens", asyn
   await expect(
     page.getByRole("heading", { name: "White vs Black" }),
   ).toBeVisible();
-  await expect(page.getByText("1 scene")).toBeVisible();
+  await expect(page.getByText("1 scene", { exact: true })).toBeVisible();
 
   await page.goto("/studio");
   await expect(

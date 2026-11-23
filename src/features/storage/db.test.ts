@@ -14,10 +14,12 @@ import {
   createPositionAnalysisRepository,
   createProjectRepository,
   createSettingsRepository,
+  createTemplateRepository,
   deleteChessForgeDatabase,
   openChessForgeDatabase,
 } from "@/features/storage/db";
 import { createWalkingSkeletonProject } from "@/features/studio/project-factory";
+import { BUILT_IN_TEMPLATES } from "@/features/templates/builtins";
 
 const PGN = `[Event "Storage test"]
 [White "White"]
@@ -162,7 +164,7 @@ describe("IndexedDB repositories", () => {
 
     await expect(
       repository.save({ ...project, name: "" } as never),
-    ).rejects.toThrow("Stored project data is invalid");
+    ).rejects.toThrow("Project changes could not be saved");
   });
 
   it("normalises a v1 project at the repository boundary", async () => {
@@ -212,6 +214,26 @@ describe("IndexedDB repositories", () => {
     expect(stored?.projectVersion).toBe(3);
     expect(stored?.scenes[0]?.timing.leadInFrames).toBe(10);
     expect(stored?.scenes[0]?.boardState.theme).toBe("forge");
+  });
+
+  it("round trips a custom template", async () => {
+    const db = await openChessForgeDatabase();
+    const repository = createTemplateRepository(db);
+    const source = BUILT_IN_TEMPLATES[0];
+    if (!source) throw new Error("Missing built-in template");
+    const custom = {
+      ...source,
+      id: crypto.randomUUID(),
+      name: "Custom template",
+      isBuiltIn: false,
+    };
+    await repository.save(custom);
+    expect((await repository.getById(custom.id))?.name).toBe("Custom template");
+    expect(
+      (await repository.list()).some((item) => item.id === custom.id),
+    ).toBe(true);
+    await repository.delete(custom.id);
+    expect(await repository.getById(custom.id)).toBeUndefined();
   });
 
   it("deduplicates assets by hash lookup", async () => {

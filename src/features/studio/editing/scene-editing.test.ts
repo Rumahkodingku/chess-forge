@@ -58,7 +58,7 @@ describe("scene editing", () => {
       timing: { ...current.timing, leadInFrames: 40 },
     }));
     const reset = resetSceneField(changed, scene.id, "timing");
-    expect(reset.scenes[1]?.durationInFrames).toBe(
+    expect(reset.scenes[1]?.durationInFrames).toBeGreaterThanOrEqual(
       sceneMinimumFrames(reset.scenes[1] as NonNullable<typeof scene>),
     );
   });

@@ -72,6 +72,7 @@ import type {
   Scene,
   VideoProject,
 } from "@/features/studio/scene/scene.types";
+import { ApplyTemplateDialog } from "@/features/templates/components/apply-template-dialog";
 import { SaveTemplateDialog } from "@/features/templates/components/save-template-dialog";
 import { toErrorMessage } from "@/lib/errors";
 import { isUuid } from "@/lib/validation";
@@ -99,6 +100,7 @@ export default function StudioProjectPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [applyTemplateOpen, setApplyTemplateOpen] = useState(false);
   const [format, setFormat] = useState<"webm" | "mp4">("webm");
   const [exportState, setExportState] = useState<ExportState>("idle");
   const [progress, setProgress] = useState(0);
@@ -116,6 +118,7 @@ export default function StudioProjectPage() {
   const controllerRef = useRef<AbortController | null>(null);
   const urlRef = useRef<string | null>(null);
   const playerRef = useRef<PlayerRef>(null);
+  const pendingFrameRef = useRef<number | null>(null);
   const [playerInstance, setPlayerInstance] = useState<PlayerRef | null>(null);
   const attachPlayer = useCallback((instance: PlayerRef | null) => {
     playerRef.current = instance;
@@ -123,6 +126,10 @@ export default function StudioProjectPage() {
   }, []);
   const editor = useProjectEditor(loadedProject);
   const project = editor.project;
+  const projectRef = useRef(project);
+  const selectedIndexRef = useRef(selectedSceneIndex);
+  projectRef.current = project;
+  selectedIndexRef.current = selectedSceneIndex;
   const persistence = useProjectAutosave({
     project,
     enabled: loadState === "ready",
@@ -241,6 +248,12 @@ export default function StudioProjectPage() {
   }, [projectId]);
 
   useEffect(() => {
+    if (!playerInstance || pendingFrameRef.current === null) return;
+    playerInstance.seekTo(pendingFrameRef.current);
+    pendingFrameRef.current = null;
+  }, [playerInstance]);
+
+  useEffect(() => {
     if (!project?.id || !playerInstance) return;
     const player = playerInstance;
     const onFrame = (event: { detail: { frame: number } }) => {
@@ -251,14 +264,23 @@ export default function StudioProjectPage() {
   }, [project?.id, playerInstance]);
 
   useEffect(() => {
-    if (!project) return;
-    const index = project.scenes.findIndex(
+    const current = projectRef.current;
+    if (!current) return;
+    const selected = current.scenes[selectedIndexRef.current];
+    if (
+      selected &&
+      currentFrame >= selected.startFrame &&
+      currentFrame < selected.startFrame + selected.durationInFrames
+    ) {
+      return;
+    }
+    const index = current.scenes.findIndex(
       (scene) =>
         currentFrame >= scene.startFrame &&
         currentFrame < scene.startFrame + scene.durationInFrames,
     );
     if (index >= 0) setSelectedSceneIndex(index);
-  }, [currentFrame, project]);
+  }, [currentFrame]);
 
   useEffect(() => {
     if (!project) return;
@@ -266,6 +288,16 @@ export default function StudioProjectPage() {
       setSelectedSceneIndex(Math.max(0, project.scenes.length - 1));
     }
   }, [project, selectedSceneIndex]);
+
+  useEffect(() => {
+    if (!persistence.dirty) return;
+    function onBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [persistence.dirty]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -314,12 +346,20 @@ export default function StudioProjectPage() {
     setRenderMs(null);
   }
 
+  function seekToFrame(frame: number) {
+    if (playerRef.current) {
+      playerRef.current.seekTo(frame);
+    } else {
+      pendingFrameRef.current = frame;
+    }
+    setCurrentFrame(frame);
+  }
+
   function seekToScene(index: number) {
     const scene = project?.scenes[index];
     if (!scene) return;
     setSelectedSceneIndex(index);
-    playerRef.current?.seekTo(scene.startFrame);
-    setCurrentFrame(scene.startFrame);
+    seekToFrame(scene.startFrame);
   }
 
   const selectedSceneFrame = selectedScene
@@ -560,6 +600,14 @@ export default function StudioProjectPage() {
           type="button"
           size="sm"
           variant="outline"
+          onClick={() => setApplyTemplateOpen(true)}
+        >
+          Apply template
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
           disabled={!project.template}
           onClick={() => setSaveTemplateOpen(true)}
         >
@@ -625,9 +673,7 @@ export default function StudioProjectPage() {
                     value={currentFrame}
                     aria-label="Seek video"
                     onChange={(event) => {
-                      const frame = Number(event.target.value);
-                      playerRef.current?.seekTo(frame);
-                      setCurrentFrame(frame);
+                      seekToFrame(Number(event.target.value));
                     }}
                     className="w-full accent-[#e8b45a]"
                   />
@@ -659,8 +705,7 @@ export default function StudioProjectPage() {
                           Math.max(0, Number(event.target.value)),
                           Math.max(0, durationInFrames - 1),
                         );
-                        playerRef.current?.seekTo(frame);
-                        setCurrentFrame(frame);
+                        seekToFrame(frame);
                       }}
                       className="h-9 w-24 font-mono text-[11px]"
                     />
@@ -671,8 +716,11 @@ export default function StudioProjectPage() {
                     className="h-9 px-3"
                     disabled={!playerInstance}
                     onClick={() => {
-                      playerRef.current?.play();
-                      playerRef.current?.seekTo(0);
+                      const player = playerRef.current;
+                      if (!player) return;
+                      player.play();
+                      player.seekTo(0);
+                      setTimeout(() => player.play(), 50);
                     }}
                   >
                     Play from start
@@ -791,11 +839,11 @@ export default function StudioProjectPage() {
                 aria-live="polite"
                 className="mt-2 text-[11px] text-muted-foreground"
               >
-                {persistence.state === "saving"
-                  ? "Autosaving to IndexedDB."
-                  : persistence.state === "saved"
-                    ? "Autosaved to IndexedDB."
-                    : persistence.state === "error"
+                {saveState === "saved" || persistence.state === "saved"
+                  ? "Autosaved to IndexedDB."
+                  : saveState === "saving" || persistence.state === "saving"
+                    ? "Autosaving to IndexedDB."
+                    : saveState === "error" || persistence.state === "error"
                       ? "Autosave failed. Edits stay in memory; retry above."
                       : "Edits autosave after 800 ms."}
               </p>
@@ -927,6 +975,12 @@ export default function StudioProjectPage() {
         </div>
       </div>
 
+      <ApplyTemplateDialog
+        project={project}
+        open={applyTemplateOpen}
+        onOpenChange={setApplyTemplateOpen}
+        onChange={(next) => editor.update(() => next)}
+      />
       <SaveTemplateDialog
         project={project}
         open={saveTemplateOpen}
@@ -938,10 +992,7 @@ export default function StudioProjectPage() {
         selectedSceneIndex={selectedSceneIndex}
         currentFrame={currentFrame}
         onSelect={seekToScene}
-        onSeekFrame={(frame) => {
-          playerRef.current?.seekTo(frame);
-          setCurrentFrame(frame);
-        }}
+        onSeekFrame={seekToFrame}
         onDuration={changeDuration}
         onReorder={(from, to) => {
           editor.update((current) => reorderScenes(current, from, to));

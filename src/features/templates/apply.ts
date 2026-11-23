@@ -1,6 +1,9 @@
 import type { Game } from "@/features/games/types";
 import { generateScenes } from "@/features/studio/creation/generate-project";
-import { sceneMinimumFrames } from "@/features/studio/rendering/timeline";
+import {
+  normalizeSceneStartFrames,
+  sceneMinimumFrames,
+} from "@/features/studio/rendering/timeline";
 import type {
   Scene,
   TemplateSnapshot,
@@ -130,7 +133,9 @@ export function applyTemplateStyle(
     ...project,
     templateId: snapshot.id,
     template: snapshot,
-    scenes: project.scenes.map((scene) => applySceneStyle(scene, snapshot)),
+    scenes: normalizeSceneStartFrames(
+      project.scenes.map((scene) => applySceneStyle(scene, snapshot)),
+    ),
     updatedAt: new Date().toISOString(),
   };
 }

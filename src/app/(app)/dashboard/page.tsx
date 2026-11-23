@@ -20,9 +20,9 @@ const pipeline = [
     phase: "R3",
   },
   {
-    label: "Forge",
-    detail: "Animation core, timeline, templates",
-    phase: "R4 / R5",
+    label: "Studio",
+    detail: "Templates, timeline, scene editor",
+    phase: "R5",
   },
   {
     label: "Export",

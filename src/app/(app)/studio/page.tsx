@@ -71,7 +71,7 @@ export default function StudioPage() {
     <div className="space-y-6">
       <PageHeader
         title="Studio"
-        description="Preview saved scene sequences with deterministic board animation, camera, text, effects, and audio. Timeline editing arrives in R5."
+        description="Create templated projects, edit scenes and timeline, and preview the full sequence with deterministic board animation, camera, text, effects, and audio."
         actions={
           <Button asChild className="h-10 px-4">
             <Link href="/analysis">Start from analysis</Link>

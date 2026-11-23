@@ -508,6 +508,10 @@ The UI must label it `Candidate Brilliant`, store `pending`, `accepted`, or `rej
 
 **Entry criteria:** Gate G8 passes.
 
+**Spec:** `docs/specs/R5-video-studio.md`.
+
+**Execution status (2026-11-23):** Gate G9 passed. Evidence is in `docs/evidence/R5/`. Project creation, seven templates, timeline editing, scene inspector, audio upload, autosave, aspect ratios, and custom templates work locally on project v3.
+
 ### 10.1 Tasks
 
 | ID     | Task                                                                                                          | Depends on               | Complexity | Acceptance criteria                              |

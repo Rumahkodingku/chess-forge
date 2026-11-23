@@ -165,6 +165,31 @@ describe("project generation", () => {
     ).toMatchObject({ mode: "moments" });
   });
 
+  it("generates a valid project for all seven built-in templates", () => {
+    const summary = {
+      opening: { eco: "C60", name: "Ruy Lopez" },
+      criticalMoments: [
+        { ply: 3, san: "Nf3", classification: "good", reason: "Develops." },
+      ],
+    } as never;
+    for (const item of BUILT_IN_TEMPLATES) {
+      const selection = defaultSelectionForTemplate(
+        item,
+        summary,
+        game.moves.length,
+      );
+      const project = generateProject({
+        game,
+        summary,
+        template: item,
+        selection,
+      });
+      expect(videoProjectSchema.safeParse(project).success).toBe(true);
+      expect(project.scenes.length).toBeGreaterThan(0);
+      expect(project.template?.id).toBe(item.id);
+    }
+  });
+
   it("replaces known text tokens and leaves unknown tokens", () => {
     expect(
       renderTemplateText("{white} vs {black} · {unknown}", {

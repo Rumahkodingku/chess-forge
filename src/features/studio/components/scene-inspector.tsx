@@ -363,11 +363,16 @@ export function SceneInspector({
                   <select
                     className="h-7 rounded border border-border/70 bg-background px-1 text-[10px]"
                     value={annotation.type}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const type = event.target.value as Annotation["type"];
                       updateAnnotation(annotation.id, {
-                        type: event.target.value as Annotation["type"],
-                      })
-                    }
+                        type,
+                        square:
+                          type === "arrow"
+                            ? annotation.square
+                            : (annotation.square ?? annotation.to ?? "e4"),
+                      });
+                    }}
                   >
                     <option value="arrow">Arrow</option>
                     <option value="square">Square</option>
@@ -409,7 +414,7 @@ export function SceneInspector({
                   />
                 </label>
               </div>
-              <div className="grid grid-cols-4 gap-1">
+              <div className="grid grid-cols-5 gap-1">
                 <label className={labelClass}>
                   From
                   <Input
@@ -429,6 +434,18 @@ export function SceneInspector({
                     onChange={(event) =>
                       updateAnnotation(annotation.id, {
                         to: event.target.value,
+                      })
+                    }
+                    className="h-7 px-1 text-[10px]"
+                  />
+                </label>
+                <label className={labelClass}>
+                  Square
+                  <Input
+                    value={annotation.square ?? ""}
+                    onChange={(event) =>
+                      updateAnnotation(annotation.id, {
+                        square: event.target.value,
                       })
                     }
                     className="h-7 px-1 text-[10px]"

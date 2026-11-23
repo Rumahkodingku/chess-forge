@@ -55,6 +55,21 @@ export function TimelinePanel({
       ),
     [project.scenes],
   );
+  const sfxSpans = useMemo(
+    () =>
+      project.scenes.flatMap((scene) =>
+        scene.audioEvents
+          .filter((event) => !event.muted)
+          .map((event) => ({
+            id: `${scene.id}-${event.id}`,
+            start:
+              scene.startFrame + scene.timing.leadInFrames + event.frameOffset,
+            duration: 18,
+            label: event.trigger,
+          })),
+      ),
+    [project.scenes],
+  );
   const annotationSpans = useMemo(
     () =>
       project.scenes.flatMap((scene) =>
@@ -214,12 +229,15 @@ export function TimelinePanel({
         />
         <TrackRow
           label="Audio"
-          spans={project.audioTracks.map((track) => ({
-            id: track.id,
-            start: track.startFrame,
-            duration: track.durationInFrames,
-            label: track.kind,
-          }))}
+          spans={[
+            ...project.audioTracks.map((track) => ({
+              id: track.id,
+              start: track.startFrame,
+              duration: track.durationInFrames,
+              label: track.kind,
+            })),
+            ...sfxSpans,
+          ]}
           duration={duration}
         />
       </div>

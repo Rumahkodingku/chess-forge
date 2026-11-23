@@ -79,18 +79,19 @@ export function sceneSfxSchedule(
     const move = snapshot.moves[frame.ply - 1];
     if (!move) continue;
     const trigger = semanticMoveTrigger(move);
-    const event = scene.audioEvents.find(
+    const events = scene.audioEvents.filter(
       (candidate) => candidate.trigger === trigger && !candidate.muted,
     );
-    if (!event) continue;
-    const startFrame = frame.endFrame + event.frameOffset;
-    if (startFrame < 0 || startFrame >= scene.durationInFrames) continue;
-    schedule.push({
-      src: BUILTIN_SFX[trigger],
-      startFrame,
-      durationInFrames: BUILTIN_DURATIONS[trigger],
-      volume: event.volume,
-    });
+    for (const event of events) {
+      const startFrame = frame.endFrame + event.frameOffset;
+      if (startFrame < 0 || startFrame >= scene.durationInFrames) continue;
+      schedule.push({
+        src: BUILTIN_SFX[trigger],
+        startFrame,
+        durationInFrames: BUILTIN_DURATIONS[trigger],
+        volume: event.volume,
+      });
+    }
   }
   return schedule;
 }

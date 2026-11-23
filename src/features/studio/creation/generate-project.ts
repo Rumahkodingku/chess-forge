@@ -216,16 +216,8 @@ function annotationsForBlock(
   durationInFrames: number,
   snapshot: TemplateSnapshot,
   game: Game,
-  templateId: string,
 ): Annotation[] {
   if (!block.moment) return [];
-  if (
-    templateId !== "tactical-breakdown" &&
-    templateId !== "brilliant-move" &&
-    templateId !== "game-recap"
-  ) {
-    return [];
-  }
   const move = game.moves[block.moment.ply - 1];
   if (!move) return [];
   const index = move.ply - block.fromPly;
@@ -239,7 +231,7 @@ function annotationsForBlock(
       type: "arrow",
       from: move.uci.slice(0, 2),
       to: move.uci.slice(2, 4),
-      color: templateId === "brilliant-move" ? "brand" : "red",
+      color: snapshot.style.effects.glow ? "brand" : "red",
       startFrame,
       durationInFrames: Math.max(1, durationInFrames - startFrame),
     },
@@ -409,7 +401,6 @@ function moveScene(
     durationInFrames,
     snapshot,
     game,
-    snapshot.id,
   );
   scene.audioEvents = sceneAudio(snapshot, scene.id);
   const momentPly = block.moment?.ply;
@@ -510,6 +501,7 @@ export function defaultSelectionForTemplate(
   moveCount = Number.MAX_SAFE_INTEGER,
 ): SourceSelection {
   const rules = template.sceneRules;
+  if (moveCount === 0) return { mode: "full" };
   if (rules.defaultSourceMode === "moments") {
     return {
       mode: "moments",

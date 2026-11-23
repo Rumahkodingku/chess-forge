@@ -21,6 +21,7 @@ export function useProjectAutosave({
 }: UseProjectAutosaveInput) {
   const [state, setState] = useState<ProjectSaveState>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
   const projectRef = useRef(project);
   const saveRef = useRef(save);
   const lastSavedRef = useRef(project);
@@ -50,11 +51,13 @@ export function useProjectAutosave({
       await saveRef.current(target);
       lastSavedRef.current = target;
       dirtyRef.current = projectRef.current !== target;
+      setDirty(dirtyRef.current);
       if (requestRef.current === request) {
         setState(dirtyRef.current ? "saving" : "saved");
       }
     } catch (saveError) {
       dirtyRef.current = true;
+      setDirty(true);
       if (requestRef.current === request) {
         setState("error");
         setError(toErrorMessage(saveError));
@@ -66,6 +69,7 @@ export function useProjectAutosave({
     if (!enabled || !project) return;
     if (project === lastSavedRef.current) return;
     dirtyRef.current = true;
+    setDirty(true);
     requestRef.current += 1;
     setState("saving");
     setError(null);
@@ -93,17 +97,23 @@ export function useProjectAutosave({
   }, [runSave]);
 
   useEffect(() => {
-    return () => {
+    const flush = () => {
       if (!dirtyRef.current) return;
       const target = projectRef.current;
       if (!target) return;
-      void saveRef.current(target);
+      void saveRef.current(target).catch(() => {});
+    };
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      flush();
     };
   }, []);
 
   return {
     state,
     error,
+    dirty,
     saveNow,
     retry: saveNow,
   };
