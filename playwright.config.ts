@@ -10,7 +10,7 @@ export default defineConfig({
     "r6-production.spec.ts",
   ],
   fullyParallel: true,
-  workers: 2,
+  workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",

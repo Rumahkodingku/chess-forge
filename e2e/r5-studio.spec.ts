@@ -118,7 +118,7 @@ test.describe("R5 video studio", () => {
 
     await page.getByRole("button", { name: "Save as template" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
-    await page.getByLabel("Name").fill("My R5 template");
+    await page.getByLabel("Name", { exact: true }).fill("My R5 template");
     await page.getByRole("button", { name: "Save template" }).click();
     await expect(page.getByRole("dialog")).toBeHidden();
 

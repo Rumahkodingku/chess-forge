@@ -130,4 +130,31 @@ test.describe("R6 export", () => {
       page.getByRole("button", { name: "Export video" }),
     ).toBeDisabled();
   });
+  test("exports a validated MP4 when the browser supports it", async ({
+    page,
+  }, testInfo) => {
+    await seedProject(page, fixture);
+    await page.goto(`/studio/${fixture.id}`);
+    await openExport(page);
+    await expect(page.getByText("Ready to render.")).toBeVisible({
+      timeout: 60_000,
+    });
+    const mp4 = page.getByRole("radio", { name: /MP4 \/ H\.264 \/ AAC/ });
+    test.skip(!(await mp4.isEnabled()), "MP4 encoding is unavailable.");
+    await page.getByLabel("Resolution").selectOption("720p");
+    await mp4.check();
+    await page.getByRole("button", { name: "Export video" }).click();
+    const downloadPromise = page.waitForEvent("download");
+    const link = page.getByRole("link", { name: "Download MP4" });
+    await expect(link).toBeVisible({ timeout: 180_000 });
+    await link.click();
+    const download = await downloadPromise;
+    const filePath = testInfo.outputPath("r6-export.mp4");
+    await download.saveAs(filePath);
+    const metadata = probe(filePath);
+    expect(metadata.video.codec).toBe("h264");
+    expect(metadata.video.width).toBe(720);
+    expect(metadata.video.height).toBe(1280);
+    expect(metadata.audio?.codec).toBe("aac");
+  });
 });

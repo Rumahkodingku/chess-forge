@@ -344,6 +344,7 @@ export function ExportPanel({
           <label className={labelClass}>
             Aspect ratio
             <select
+              aria-label="Export aspect ratio"
               className={selectClass}
               value={project.canvas.aspectRatio}
               disabled={exporting}

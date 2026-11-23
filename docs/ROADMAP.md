@@ -556,6 +556,10 @@ The UI must label it `Candidate Brilliant`, store `pending`, `accepted`, or `rej
 
 **Entry criteria:** Gate G9 passes.
 
+**Spec:** `docs/specs/R6-export.md`.
+
+**Execution status (2026-11-23):** Gate G10 passed. Evidence is in `docs/evidence/R6/`. Export configuration, capability detection, snapshot rendering, OPFS fallback, cancellation, MP4/WebM output, Mediabunny validation, and duration guards work locally.
+
 ### 11.1 Tasks
 
 | ID     | Task                                                                                                                  | Depends on       | Complexity | Acceptance criteria           |

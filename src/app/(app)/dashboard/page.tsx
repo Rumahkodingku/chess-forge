@@ -26,8 +26,8 @@ const pipeline = [
   },
   {
     label: "Export",
-    detail: "Browser render to video",
-    phase: "R1 / R6",
+    detail: "Configured browser render",
+    phase: "R6",
   },
 ];
 

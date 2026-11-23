@@ -1,7 +1,7 @@
 # R6 — Export
 
 **Spec version:** 1.0
-**Status:** Ready for implementation
+**Status:** Gate-verified
 **Phase:** R6
 **PRD mapping:** PH-5; §6.8; AC-07
 **Exit gate:** G10
