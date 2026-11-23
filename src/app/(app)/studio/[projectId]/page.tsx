@@ -442,12 +442,17 @@ export default function StudioProjectPage() {
       const result = await exportProject({
         project,
         resolvedAudioAssets,
-        container: format,
-        videoCodec: format === "mp4" ? "h264" : "vp9",
-        audioCodec: format === "mp4" ? "aac" : "opus",
+        config: {
+          container: format,
+          videoCodec: format === "mp4" ? "h264" : "vp9",
+          audioCodec: format === "mp4" ? "aac" : "opus",
+          resolution: "1080p",
+          quality: "medium",
+          includeAudio: true,
+          fileName: "export",
+        },
         signal: controller.signal,
-        onProgress: (nextProgress) =>
-          setProgress(Math.round(nextProgress * 100)),
+        onProgress: (nextProgress) => setProgress(nextProgress.percent),
       });
       const url = URL.createObjectURL(result.blob);
       urlRef.current = url;

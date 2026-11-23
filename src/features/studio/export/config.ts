@@ -7,6 +7,16 @@ export type ExportContainer = "mp4" | "webm";
 export type ExportVideoCodec = "h264" | "vp9" | "vp8";
 export type ExportAudioCodec = "aac" | "opus";
 
+export interface ExportConfig {
+  container: ExportContainer;
+  videoCodec: ExportVideoCodec;
+  audioCodec: ExportAudioCodec | null;
+  resolution: ExportResolution;
+  quality: ExportQuality;
+  includeAudio: boolean;
+  fileName: string;
+}
+
 export interface ExportFormat {
   id: ExportFormatId;
   label: string;

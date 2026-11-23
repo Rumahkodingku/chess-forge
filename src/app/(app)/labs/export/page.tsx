@@ -208,12 +208,17 @@ export default function ExportLabPage() {
     try {
       const result = await exportProject({
         project,
-        container: selected.container,
-        videoCodec: selected.videoCodec,
-        audioCodec: selected.audioCodec,
+        config: {
+          container: selected.container,
+          videoCodec: selected.videoCodec,
+          audioCodec: selected.audioCodec,
+          resolution: "1080p",
+          quality: "medium",
+          includeAudio: true,
+          fileName: "export-lab",
+        },
         signal: controller.signal,
-        onProgress: (nextProgress) =>
-          setProgress(Math.round(nextProgress * 100)),
+        onProgress: (nextProgress) => setProgress(nextProgress.percent),
       });
       const url = URL.createObjectURL(result.blob);
       urlRef.current = url;
