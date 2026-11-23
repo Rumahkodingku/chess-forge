@@ -5,7 +5,7 @@ roadmap_version: "1.0"
 prd_version: "1.0"
 prd_revision: "1.1"
 status: Approved for implementation
-last_updated: 2026-11-22
+last_updated: 2026-11-23
 language: en
 ---
 
@@ -387,6 +387,10 @@ VideoProject -> Remotion composition -> browser export -> downloadable file
 
 **Entry criteria:** Gate G6 passes.
 
+**Spec:** `docs/specs/R3-full-stockfish-analysis.md`.
+
+**Execution status (2026-11-23):** Specification ready. Implementation has not started.
+
 ### 8.1 Tasks
 
 | ID     | Task                                                                                                                                             | Depends on             | Complexity | Acceptance criteria            |
@@ -409,7 +413,38 @@ VideoProject -> Remotion composition -> browser export -> downloadable file
 | R3-T16 | Implement analysis UI: classification indicators, summary panel, critical moment navigation, and caveats                                         | R3-T04, R3-T10, R3-T15 | M          | AC-04 and §7.4 pass            |
 | R3-T17 | Add unit, integration, and fixture tests for engine parsing, classification, CPL, mate handling, opening lookup, phase, threats, and summary     | R3-T01 to R3-T16       | M          | AC-04 and §14 pass             |
 
-### 8.2 Phase acceptance criteria
+### 8.2 Classification thresholds
+
+Thresholds are centralised in one configuration module. Mate transitions use a separate table and are never converted to centipawn loss.
+
+| Classification | Rule |
+| --- | --- |
+| Best | Played UCI equals engine `bestMoveUci` |
+| Excellent | Centipawn loss 1–20 |
+| Good | Centipawn loss 21–50 |
+| Inaccuracy | Centipawn loss 51–100 |
+| Mistake | Centipawn loss 101–200 |
+| Blunder | Centipawn loss > 200 |
+
+A played move with zero centipawn loss but a different UCI from the engine best move is `excellent`, not `best`. Forced moves are `best` with low confidence and a caveat.
+
+### 8.3 Candidate Brilliant
+
+Candidate Brilliant is conservative and remains a candidate until the user accepts or rejects it.
+
+Required conditions:
+
+- Played move is the engine best move.
+- The move creates a material sacrifice of at least 300 centipawns by the documented two-ply static exchange heuristic.
+- Evaluation after the move is at least +0.50 for the mover.
+- At least one legal alternative does not create the same sacrifice.
+- The position is not a forced move.
+- The position is not still inside the opening book match.
+- The move is not the only legal move.
+
+The UI must label it `Candidate Brilliant`, store `pending`, `accepted`, or `rejected`, and never present it as an official Chess.com or Lichess classification.
+
+### 8.4 Phase acceptance criteria
 
 - Stockfish runs in a worker without freezing the UI.
 - Evaluation, best move, PV, depth, and mate are displayed.
@@ -418,7 +453,7 @@ VideoProject -> Remotion composition -> browser export -> downloadable file
 - Opening, phase, threat, and summary features work offline.
 - Cached analysis is reused correctly.
 
-### 8.3 Exit gate
+### 8.5 Exit gate
 
 - **G7:** AC-04 passes and full §6.3 is implemented.
 
