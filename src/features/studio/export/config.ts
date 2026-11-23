@@ -109,5 +109,5 @@ export function defaultExportName(
 }
 
 export function formatById(id: ExportFormatId): ExportFormat {
-  return EXPORT_FORMATS.find((format) => format.id === id) ?? EXPORT_FORMATS[0]!;
+  return EXPORT_FORMATS.find((format) => format.id === id) ?? EXPORT_FORMATS[0];
 }

@@ -148,11 +148,10 @@ export function resetSceneField(
         }
         if (field === "annotations") {
           const moments = project.sourceContext?.criticalMoments ?? [];
-          const moment = scene.moveRange
+          const range = scene.moveRange;
+          const moment = range
             ? moments.find(
-                (item) =>
-                  item.ply >= scene.moveRange!.fromPly &&
-                  item.ply <= scene.moveRange!.toPly,
+                (item) => item.ply >= range.fromPly && item.ply <= range.toPly,
               )
             : undefined;
           const move =
@@ -201,10 +200,11 @@ export function resetSceneField(
         }
         if (field === "textOverlays") {
           const overlays: TextOverlay[] = [];
-          if (scene.moveRange && project.gameSnapshot) {
+          const range = scene.moveRange;
+          if (range && project.gameSnapshot) {
             const moves = project.gameSnapshot.moves.slice(
-              scene.moveRange.fromPly - 1,
-              scene.moveRange.toPly,
+              range.fromPly - 1,
+              range.toPly,
             );
             for (const [index, move] of moves.entries()) {
               const startFrame =
@@ -229,9 +229,7 @@ export function resetSceneField(
               });
             }
             const moment = project.sourceContext?.criticalMoments?.find(
-              (item) =>
-                item.ply >= scene.moveRange!.fromPly &&
-                item.ply <= scene.moveRange!.toPly,
+              (item) => item.ply >= range.fromPly && item.ply <= range.toPly,
             );
             if (moment) {
               overlays.push(
