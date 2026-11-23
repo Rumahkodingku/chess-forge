@@ -44,6 +44,7 @@ import {
   openChessForgeDatabase,
 } from "@/features/storage/db";
 import { formatBytes } from "@/features/storage/use-storage-status";
+import { ProjectAudioEditor } from "@/features/studio/components/project-audio-editor";
 import { SceneInspector } from "@/features/studio/components/scene-inspector";
 import { TimelinePanel } from "@/features/studio/components/timeline-panel";
 import {
@@ -787,6 +788,19 @@ export default function StudioProjectPage() {
                       ? "Autosave failed. Edits stay in memory; retry above."
                       : "Edits autosave after 800 ms."}
               </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/80 bg-surface-1">
+            <CardHeader>
+              <CardTitle className="text-[15px]">Project audio</CardTitle>
+              <CardDescription>
+                Music and project-level SFX tracks. Scene SFX live in the scene
+                inspector.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ProjectAudioEditor project={project} onChange={editor.update} />
             </CardContent>
           </Card>
 
