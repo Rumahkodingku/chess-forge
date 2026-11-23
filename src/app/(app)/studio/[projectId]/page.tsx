@@ -6,9 +6,11 @@ import {
   Clapperboard,
   Download,
   Loader2,
+  Redo2,
   Save,
   Square,
   TriangleAlert,
+  Undo2,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -35,18 +37,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ASPECT_PRESETS } from "@/features/settings/types";
 import {
   createAssetRepository,
   createProjectRepository,
   openChessForgeDatabase,
 } from "@/features/storage/db";
 import { formatBytes } from "@/features/storage/use-storage-status";
+import { SceneInspector } from "@/features/studio/components/scene-inspector";
+import { TimelinePanel } from "@/features/studio/components/timeline-panel";
+import {
+  addScene,
+  deleteScene,
+  duplicateScene,
+  reorderScenes,
+  setCanvas,
+  setSceneDuration,
+} from "@/features/studio/editing/project-operations";
+import {
+  resetSceneField as resetSceneFieldValue,
+  type SceneField,
+  updateScene as updateSceneValue,
+} from "@/features/studio/editing/scene-editing";
+import { useProjectAutosave } from "@/features/studio/editing/use-project-autosave";
+import { useProjectEditor } from "@/features/studio/editing/use-project-editor";
 import { projectFileName } from "@/features/studio/file-name";
 import { exportProject } from "@/features/studio/rendering/export-runner";
 import { ProjectComposition } from "@/features/studio/rendering/project-composition";
 import { validateTextOverlays } from "@/features/studio/rendering/text-safety";
 import { projectDurationInFrames } from "@/features/studio/rendering/timeline";
-import type { VideoProject } from "@/features/studio/scene/scene.types";
+import type {
+  AspectRatio,
+  Scene,
+  VideoProject,
+} from "@/features/studio/scene/scene.types";
 import { toErrorMessage } from "@/lib/errors";
 import { isUuid } from "@/lib/validation";
 
@@ -68,7 +92,7 @@ export default function StudioProjectPage() {
   const projectId = Array.isArray(params.projectId)
     ? params.projectId[0]
     : params.projectId;
-  const [project, setProject] = useState<VideoProject | null>(null);
+  const [loadedProject, setLoadedProject] = useState<VideoProject | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -94,6 +118,19 @@ export default function StudioProjectPage() {
     playerRef.current = instance;
     setPlayerInstance(instance);
   }, []);
+  const editor = useProjectEditor(loadedProject);
+  const project = editor.project;
+  const persistence = useProjectAutosave({
+    project,
+    enabled: loadState === "ready",
+    save: async (next) => {
+      const db = await openChessForgeDatabase();
+      await createProjectRepository(db).save({
+        ...next,
+        updatedAt: new Date().toISOString(),
+      });
+    },
+  });
 
   useEffect(() => {
     if (!isUuid(projectId)) {
@@ -110,7 +147,7 @@ export default function StudioProjectPage() {
           setLoadState("missing");
           return;
         }
-        setProject(stored);
+        setLoadedProject(stored);
         setLoadState("ready");
       } catch (error) {
         if (!cancelled) {
@@ -220,6 +257,37 @@ export default function StudioProjectPage() {
     if (index >= 0) setSelectedSceneIndex(index);
   }, [currentFrame, project]);
 
+  useEffect(() => {
+    if (!project) return;
+    if (selectedSceneIndex >= project.scenes.length) {
+      setSelectedSceneIndex(Math.max(0, project.scenes.length - 1));
+    }
+  }, [project, selectedSceneIndex]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        event.key.toLowerCase() !== "z"
+      ) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+      event.preventDefault();
+      if (event.shiftKey) editor.redo();
+      else editor.undo();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [editor.redo, editor.undo]);
+
   const durationInFrames = project ? projectDurationInFrames(project) : 0;
   const selectedScene =
     project?.scenes[selectedSceneIndex] ?? project?.scenes[0];
@@ -251,6 +319,35 @@ export default function StudioProjectPage() {
     setCurrentFrame(scene.startFrame);
   }
 
+  const selectedSceneFrame = selectedScene
+    ? Math.min(
+        Math.max(0, currentFrame - selectedScene.startFrame),
+        Math.max(0, selectedScene.durationInFrames - 1),
+      )
+    : 0;
+
+  function editScene(field: SceneField, mutator: (scene: Scene) => Scene) {
+    if (!selectedScene) return;
+    const sceneId = selectedScene.id;
+    editor.update((current) =>
+      updateSceneValue(current, sceneId, field, mutator),
+    );
+  }
+
+  function resetScene(field: SceneField) {
+    if (!selectedScene) return;
+    const sceneId = selectedScene.id;
+    editor.update((current) => resetSceneFieldValue(current, sceneId, field));
+  }
+
+  function changeDuration(sceneId: string, frames: number) {
+    editor.update((current) => setSceneDuration(current, sceneId, frames));
+  }
+
+  function changeAspectRatio(value: string) {
+    editor.update((current) => setCanvas(current, value as AspectRatio));
+  }
+
   async function saveProject() {
     if (!project) return;
     setSaveState("saving");
@@ -261,7 +358,6 @@ export default function StudioProjectPage() {
       };
       const db = await openChessForgeDatabase();
       await createProjectRepository(db).save(next);
-      setProject(next);
       setSaveState("saved");
       toast.success("Project saved to this device.");
     } catch (error) {
@@ -396,6 +492,87 @@ export default function StudioProjectPage() {
         }
       />
 
+      <section className="flex flex-wrap items-center gap-2 rounded-xl border border-border/80 bg-surface-1 p-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={!editor.canUndo}
+          onClick={editor.undo}
+        >
+          <Undo2 aria-hidden className="size-3.5" />
+          Undo
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={!editor.canRedo}
+          onClick={editor.redo}
+        >
+          <Redo2 aria-hidden className="size-3.5" />
+          Redo
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => void saveProject()}
+          disabled={saveState === "saving"}
+        >
+          {saveState === "saving" ? (
+            <Loader2 aria-hidden className="size-3.5 animate-spin" />
+          ) : (
+            <Save aria-hidden className="size-3.5" />
+          )}
+          Save now
+        </Button>
+        <span
+          aria-live="polite"
+          className={`text-[10px] ${
+            persistence.state === "error"
+              ? "text-destructive"
+              : "text-muted-foreground"
+          }`}
+        >
+          {persistence.state === "saving"
+            ? "Saving..."
+            : persistence.state === "saved"
+              ? "Saved"
+              : persistence.state === "error"
+                ? (persistence.error ?? "Save failed")
+                : "Autosave ready"}
+        </span>
+        {persistence.state === "error" ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => void persistence.retry()}
+          >
+            Retry
+          </Button>
+        ) : null}
+        <span className="ml-auto text-[10px] text-muted-foreground">
+          Template: {project.template?.name ?? project.templateId}
+        </span>
+        <label className="flex items-center gap-2 text-[10px] text-muted-foreground">
+          Aspect
+          <select
+            aria-label="Aspect ratio"
+            value={project.canvas.aspectRatio}
+            onChange={(event) => changeAspectRatio(event.target.value)}
+            className="h-8 rounded border border-border/70 bg-background px-2 text-[11px] text-foreground"
+          >
+            {Object.keys(ASPECT_PRESETS).map((ratio) => (
+              <option key={ratio} value={ratio}>
+                {ratio}
+              </option>
+            ))}
+          </select>
+        </label>
+      </section>
+
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
         <Card className="border-border/80 bg-surface-1">
           <CardHeader>
@@ -480,9 +657,10 @@ export default function StudioProjectPage() {
                     type="button"
                     size="sm"
                     className="h-9 px-3"
+                    disabled={!playerInstance}
                     onClick={() => {
-                      playerRef.current?.seekTo(0);
                       playerRef.current?.play();
+                      playerRef.current?.seekTo(0);
                     }}
                   >
                     Play from start
@@ -492,52 +670,12 @@ export default function StudioProjectPage() {
                     size="sm"
                     variant="outline"
                     className="h-9 border-border/80 bg-transparent px-3"
+                    disabled={!playerInstance}
                     onClick={() => playerRef.current?.pause()}
                   >
                     Pause
                   </Button>
                 </div>
-                <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
-                  {project.scenes.map((scene, index) => (
-                    <button
-                      key={scene.id}
-                      type="button"
-                      onClick={() => seekToScene(index)}
-                      aria-current={
-                        selectedSceneIndex === index ? "true" : undefined
-                      }
-                      className={`flex min-h-11 items-center justify-between gap-3 rounded-md border px-3 py-2 text-left transition-colors ${
-                        selectedSceneIndex === index
-                          ? "border-brand/40 bg-brand/10 text-foreground"
-                          : "border-border/70 bg-surface-2/60 text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="font-mono text-[10px] text-muted-foreground">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        <span className="text-[12px] capitalize">
-                          {scene.type}
-                        </span>
-                      </span>
-                      <span className="font-mono text-[10px]">
-                        {(scene.startFrame / project.frameRate).toFixed(1)}s -{" "}
-                        {(
-                          (scene.startFrame + scene.durationInFrames) /
-                          project.frameRate
-                        ).toFixed(1)}
-                        s
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                {selectedScene ? (
-                  <p className="mt-2 text-[10px] text-muted-foreground">
-                    Selected scene {selectedSceneIndex + 1}:{" "}
-                    {selectedScene.type}, {selectedScene.durationInFrames}{" "}
-                    frames.
-                  </p>
-                ) : null}
               </>
             ) : (
               <EmptyState
@@ -567,6 +705,15 @@ export default function StudioProjectPage() {
         </Card>
 
         <div className="space-y-5">
+          {selectedScene ? (
+            <SceneInspector
+              project={project}
+              scene={selectedScene}
+              sceneFrame={selectedSceneFrame}
+              onChange={editScene}
+              onReset={resetScene}
+            />
+          ) : null}
           <Card className="border-border/80 bg-surface-1">
             <CardHeader>
               <CardTitle className="text-[15px]">Project details</CardTitle>
@@ -580,7 +727,7 @@ export default function StudioProjectPage() {
                 <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-3">
                   <dt className="text-muted-foreground">Template</dt>
                   <dd className="font-mono text-foreground">
-                    {project.templateId}
+                    {project.template?.name ?? project.templateId}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-3">
@@ -632,11 +779,13 @@ export default function StudioProjectPage() {
                 aria-live="polite"
                 className="mt-2 text-[11px] text-muted-foreground"
               >
-                {saveState === "saved"
-                  ? "Saved to IndexedDB."
-                  : saveState === "error"
-                    ? "Save failed. The project is unchanged."
-                    : "No autosave in R4. Save explicitly."}
+                {persistence.state === "saving"
+                  ? "Autosaving to IndexedDB."
+                  : persistence.state === "saved"
+                    ? "Autosaved to IndexedDB."
+                    : persistence.state === "error"
+                      ? "Autosave failed. Edits stay in memory; retry above."
+                      : "Edits autosave after 800 ms."}
               </p>
             </CardContent>
           </Card>
@@ -752,6 +901,31 @@ export default function StudioProjectPage() {
           </Card>
         </div>
       </div>
+
+      <TimelinePanel
+        project={project}
+        selectedSceneIndex={selectedSceneIndex}
+        currentFrame={currentFrame}
+        onSelect={seekToScene}
+        onSeekFrame={(frame) => {
+          playerRef.current?.seekTo(frame);
+          setCurrentFrame(frame);
+        }}
+        onDuration={changeDuration}
+        onReorder={(from, to) => {
+          editor.update((current) => reorderScenes(current, from, to));
+          setSelectedSceneIndex(to);
+        }}
+        onDuplicate={(sceneId) => {
+          editor.update((current) => duplicateScene(current, sceneId));
+        }}
+        onDelete={(sceneId) => {
+          editor.update((current) => deleteScene(current, sceneId));
+        }}
+        onAdd={(sceneId) => {
+          editor.update((current) => addScene(current, sceneId));
+        }}
+      />
     </div>
   );
 }

@@ -27,9 +27,20 @@ export function useProjectAutosave({
   const requestRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirtyRef = useRef(false);
+  const enabledRef = useRef(false);
 
   projectRef.current = project;
   saveRef.current = save;
+
+  useEffect(() => {
+    if (enabled && !enabledRef.current) {
+      enabledRef.current = true;
+      lastSavedRef.current = projectRef.current;
+    }
+    if (!enabled) {
+      enabledRef.current = false;
+    }
+  }, [enabled]);
 
   const runSave = useCallback(async (target: VideoProject) => {
     const request = ++requestRef.current;

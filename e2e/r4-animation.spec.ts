@@ -79,24 +79,24 @@ test.describe("R4 animation core", () => {
       timeout: 30_000,
     });
     await expect(page.getByText("Audio tracks")).toBeVisible();
-    await expect(page.getByText("4 scenes")).toBeVisible();
+    await expect(page.getByText("4 scenes", { exact: true })).toBeVisible();
 
     const sceneButton = page.getByRole("button", { name: /03 move/ });
     await sceneButton.click();
     await expect(sceneButton).toHaveAttribute("aria-current", "true");
-    await expect(page.getByLabel("Frame")).toHaveValue("165");
+    await expect(page.locator("#studio-frame")).toHaveValue("165");
     await expect(page.locator("[data-scene-camera]")).toHaveAttribute(
       "style",
       /scale\(1\.5\)/,
     );
 
-    await page.getByLabel("Frame").fill("189");
+    await page.locator("#studio-frame").fill("189");
     await expect(page.locator("[data-moving-piece]").first()).toBeVisible();
 
     await page.getByRole("button", { name: "Play from start" }).click();
     await expect
       .poll(async () => {
-        const value = await page.getByLabel("Frame").inputValue();
+        const value = await page.locator("#studio-frame").inputValue();
         return Number(value);
       })
       .toBeGreaterThan(0);
@@ -116,9 +116,11 @@ test.describe("R4 animation core", () => {
     await seedProject(page, project);
     await page.goto(`/studio/${project.id}`);
 
-    await expect(page.getByText("Preview warnings")).toBeVisible();
+    await expect(
+      page.getByText("Preview warnings", { exact: true }).first(),
+    ).toBeVisible();
     await expect(page.getByText(/Audio asset .* missing/)).toBeVisible();
-    await expect(page.getByText(/safe area/)).toBeVisible();
+    await expect(page.getByText(/safe area/).first()).toBeVisible();
     await expect(page.getByText("The Ruy Lopez")).toBeVisible();
   });
 });
