@@ -83,6 +83,27 @@ export class UnsupportedCapabilityError extends AppError {
   }
 }
 
+export type ExportStage =
+  | "capability"
+  | "render"
+  | "storage"
+  | "validation"
+  | "cleanup";
+
+export class ExportError extends AppError {
+  readonly stage: ExportStage;
+
+  constructor(
+    stage: ExportStage,
+    message: string,
+    recovery = "Check the export settings and try again.",
+  ) {
+    super("EXPORT_ERROR", message, recovery);
+    this.name = "ExportError";
+    this.stage = stage;
+  }
+}
+
 export function toErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
