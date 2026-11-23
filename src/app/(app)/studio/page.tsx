@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Clapperboard, Loader2 } from "lucide-react";
+import { ArrowRight, Clapperboard, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/layout/empty-state";
@@ -52,6 +52,20 @@ export default function StudioPage() {
       cancelled = true;
     };
   }, []);
+
+  async function deleteProject(projectId: string) {
+    if (!window.confirm("Delete this project? This cannot be undone.")) return;
+    try {
+      const db = await openChessForgeDatabase();
+      await createProjectRepository(db).delete(projectId);
+      setProjects((current) =>
+        current.filter((project) => project.id !== projectId),
+      );
+    } catch (deleteError) {
+      setError(toErrorMessage(deleteError));
+      setState("error");
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -114,16 +128,27 @@ export default function StudioPage() {
                     {project.canvas.aspectRatio}
                   </CardDescription>
                 </div>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-9 border-border/80 bg-transparent px-3"
-                >
-                  <Link href={`/studio/${project.id}`}>
-                    Open
-                    <ArrowRight aria-hidden className="size-3.5" />
-                  </Link>
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-9 px-2 text-destructive"
+                    aria-label={`Delete ${project.name}`}
+                    onClick={() => void deleteProject(project.id)}
+                  >
+                    <Trash2 aria-hidden className="size-3.5" />
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-9 border-border/80 bg-transparent px-3"
+                  >
+                    <Link href={`/studio/${project.id}`}>
+                      Open
+                      <ArrowRight aria-hidden className="size-3.5" />
+                    </Link>
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-[11px] text-muted-foreground">

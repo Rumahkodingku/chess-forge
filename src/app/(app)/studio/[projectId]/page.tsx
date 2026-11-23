@@ -72,6 +72,7 @@ import type {
   Scene,
   VideoProject,
 } from "@/features/studio/scene/scene.types";
+import { SaveTemplateDialog } from "@/features/templates/components/save-template-dialog";
 import { toErrorMessage } from "@/lib/errors";
 import { isUuid } from "@/lib/validation";
 
@@ -97,6 +98,7 @@ export default function StudioProjectPage() {
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const [format, setFormat] = useState<"webm" | "mp4">("webm");
   const [exportState, setExportState] = useState<ExportState>("idle");
   const [progress, setProgress] = useState(0);
@@ -554,6 +556,15 @@ export default function StudioProjectPage() {
             Retry
           </Button>
         ) : null}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={!project.template}
+          onClick={() => setSaveTemplateOpen(true)}
+        >
+          Save as template
+        </Button>
         <span className="ml-auto text-[10px] text-muted-foreground">
           Template: {project.template?.name ?? project.templateId}
         </span>
@@ -915,6 +926,12 @@ export default function StudioProjectPage() {
           </Card>
         </div>
       </div>
+
+      <SaveTemplateDialog
+        project={project}
+        open={saveTemplateOpen}
+        onOpenChange={setSaveTemplateOpen}
+      />
 
       <TimelinePanel
         project={project}
