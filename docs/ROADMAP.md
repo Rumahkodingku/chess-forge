@@ -469,7 +469,7 @@ The UI must label it `Candidate Brilliant`, store `pending`, `accepted`, or `rej
 
 **Spec:** `docs/specs/R4-animation-core.md`.
 
-**Execution status (2026-11-23):** Specification ready. Implementation has not started.
+**Execution status (2026-11-23):** Gate G8 passed. Evidence is in `docs/evidence/R4/`. The deterministic animation core previews multi-scene projects with legal move animation, camera, text, effects, and audio. R1 projects normalise to scene v2.
 
 ### 9.1 Tasks
 

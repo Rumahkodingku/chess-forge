@@ -81,7 +81,9 @@ test("R1 walking skeleton imports, analyses, forges, exports, and reopens", asyn
   await expect(page.getByText("Project details")).toBeVisible({
     timeout: 30_000,
   });
-  await expect(page.getByText("ChessForge scene")).toBeVisible({
+  await expect(
+    page.locator("[data-scene-text]").filter({ hasText: "3. Bb5" }),
+  ).toBeVisible({
     timeout: 30_000,
   });
 

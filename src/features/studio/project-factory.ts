@@ -54,12 +54,18 @@ export function createWalkingSkeletonScene({
     boardState: {
       fen: move.fenBefore,
       orientation: "w",
-      lastMove: move.uci,
+      theme: "forge",
+      coordinates: true,
+    },
+    timing: {
+      leadInFrames: 10,
+      moveDurationFrames: 45,
+      gapFrames: 0,
+      holdFrames: 35,
+      easing: "easeInOut",
     },
     camera: {
-      zoom: 1,
-      x: 0,
-      y: 0,
+      keyframes: [{ frame: 0, zoom: 1, x: 0, y: 0, easing: "easeInOut" }],
     },
     annotations: [],
     textOverlays: [
@@ -67,7 +73,15 @@ export function createWalkingSkeletonScene({
         id: createId(),
         kind: "move-label",
         text: moveLabel(move),
+        font: "display",
+        fontSize: 64,
+        color: "foreground",
+        align: "center",
         position: "bottom",
+        x: 0,
+        y: 0,
+        maxWidth: 80,
+        background: false,
         startFrame: 0,
         durationInFrames: R1_SCENE_DURATION_FRAMES,
       },
@@ -76,11 +90,22 @@ export function createWalkingSkeletonScene({
       lastMoveHighlight: true,
       checkIndicator: true,
       captureEmphasis: true,
+      checkmateEmphasis: true,
       glow: false,
+      focus: false,
     },
-    audioReferences: [],
+    focusSquares: [],
+    audioEvents: [
+      {
+        id: createId(),
+        trigger: "move",
+        frameOffset: 0,
+        volume: 0.5,
+        muted: false,
+      },
+    ],
     overrides: {},
-    schemaVersion: 1,
+    schemaVersion: 2,
   };
 }
 
@@ -96,7 +121,7 @@ export function createWalkingSkeletonProject({
     name: `${game.metadata.white} vs ${game.metadata.black}`,
     sourceGameId: game.id,
     templateId: R1_TEMPLATE_ID,
-    projectVersion: 1,
+    projectVersion: 2,
     canvas: {
       aspectRatio: "9:16",
       width: 1080,
@@ -109,6 +134,7 @@ export function createWalkingSkeletonProject({
       annotation: [],
       audio: [],
     },
+    audioTracks: [],
     assets: [],
     gameSnapshot: {
       metadata: game.metadata,
@@ -117,7 +143,7 @@ export function createWalkingSkeletonProject({
     },
     createdAt: now,
     updatedAt: now,
-    schemaVersion: 1,
+    schemaVersion: 2,
   };
 
   return videoProjectSchema.parse(project);

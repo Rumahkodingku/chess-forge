@@ -21,8 +21,8 @@ const pipeline = [
   },
   {
     label: "Forge",
-    detail: "Scenes, timeline, templates",
-    phase: "R1 / R5",
+    detail: "Animation core, timeline, templates",
+    phase: "R4 / R5",
   },
   {
     label: "Export",
@@ -77,7 +77,8 @@ export default function DashboardPage() {
               </div>
               <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
                 R2 imports paste, file, Chess.com, and Lichess games. R3 adds
-                full game analysis.
+                full game analysis. R4 renders deterministic scenes with camera,
+                text, effects, and audio.
               </p>
             </div>
             <div className="mx-auto w-full max-w-[260px] rounded-xl border border-border/80 bg-surface-2 p-2.5 board-shadow lg:mx-0 lg:ml-auto">

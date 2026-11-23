@@ -1,0 +1,430 @@
+{
+  "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "name": "R4 animation fixture",
+  "templateId": "r4-fixture",
+  "projectVersion": 2,
+  "canvas": {
+    "aspectRatio": "9:16",
+    "width": 1080,
+    "height": 1920
+  },
+  "frameRate": 30,
+  "scenes": [
+    {
+      "type": "intro",
+      "startFrame": 0,
+      "durationInFrames": 45,
+      "boardState": {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "orientation": "w",
+        "theme": "forge",
+        "coordinates": true
+      },
+      "timing": {
+        "leadInFrames": 12,
+        "moveDurationFrames": 24,
+        "gapFrames": 6,
+        "holdFrames": 24,
+        "easing": "easeInOut"
+      },
+      "camera": {
+        "keyframes": [
+          {
+            "frame": 0,
+            "zoom": 1,
+            "x": 0,
+            "y": 0,
+            "easing": "easeInOut"
+          }
+        ]
+      },
+      "annotations": [],
+      "textOverlays": [
+        {
+          "id": "7cfbd6c3-155f-4e77-880f-b6e3d2a7bf11",
+          "kind": "title",
+          "text": "The Ruy Lopez",
+          "font": "display",
+          "fontSize": 64,
+          "color": "foreground",
+          "align": "center",
+          "position": "center",
+          "x": 0,
+          "y": 0,
+          "maxWidth": 80,
+          "background": false,
+          "startFrame": 0,
+          "durationInFrames": 45
+        }
+      ],
+      "effects": {
+        "lastMoveHighlight": true,
+        "checkIndicator": true,
+        "captureEmphasis": true,
+        "checkmateEmphasis": true,
+        "glow": false,
+        "focus": false
+      },
+      "focusSquares": [],
+      "audioEvents": [],
+      "overrides": {},
+      "schemaVersion": 2,
+      "id": "11111111-1111-4111-8111-111111111111"
+    },
+    {
+      "type": "move",
+      "startFrame": 45,
+      "durationInFrames": 120,
+      "boardState": {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "orientation": "w",
+        "theme": "forge",
+        "coordinates": true
+      },
+      "timing": {
+        "leadInFrames": 12,
+        "moveDurationFrames": 24,
+        "gapFrames": 6,
+        "holdFrames": 24,
+        "easing": "easeInOut"
+      },
+      "camera": {
+        "keyframes": [
+          {
+            "frame": 0,
+            "zoom": 1.35,
+            "x": 0.06,
+            "y": 0.06,
+            "easing": "easeInOut"
+          },
+          {
+            "frame": 100,
+            "zoom": 1,
+            "x": 0,
+            "y": 0,
+            "easing": "easeInOut"
+          }
+        ]
+      },
+      "annotations": [],
+      "textOverlays": [
+        {
+          "id": "d51bbee2-f6f9-4932-ae01-412de91ea203",
+          "kind": "explanation",
+          "text": "Opening moves",
+          "font": "body",
+          "fontSize": 32,
+          "color": "muted",
+          "align": "left",
+          "position": "top",
+          "x": 0,
+          "y": 0,
+          "maxWidth": 80,
+          "background": false,
+          "startFrame": 0,
+          "durationInFrames": 120
+        }
+      ],
+      "effects": {
+        "lastMoveHighlight": true,
+        "checkIndicator": true,
+        "captureEmphasis": true,
+        "checkmateEmphasis": true,
+        "glow": false,
+        "focus": false
+      },
+      "focusSquares": [],
+      "audioEvents": [
+        {
+          "id": "d465aa95-196a-4268-a772-ee4cea7050e2",
+          "trigger": "move",
+          "frameOffset": 0,
+          "volume": 0.5,
+          "muted": false
+        }
+      ],
+      "overrides": {},
+      "schemaVersion": 2,
+      "id": "22222222-2222-4222-8222-222222222222",
+      "moveRange": {
+        "fromPly": 1,
+        "toPly": 3
+      }
+    },
+    {
+      "type": "move",
+      "startFrame": 165,
+      "durationInFrames": 120,
+      "boardState": {
+        "fen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+        "orientation": "w",
+        "theme": "forge",
+        "coordinates": true
+      },
+      "timing": {
+        "leadInFrames": 12,
+        "moveDurationFrames": 24,
+        "gapFrames": 6,
+        "holdFrames": 24,
+        "easing": "easeInOut"
+      },
+      "camera": {
+        "keyframes": [
+          {
+            "frame": 0,
+            "zoom": 1.5,
+            "x": -0.25,
+            "y": -0.06,
+            "easing": "easeInOut"
+          },
+          {
+            "frame": 12,
+            "zoom": 1,
+            "x": 0,
+            "y": 0,
+            "easing": "easeInOut"
+          },
+          {
+            "frame": 110,
+            "zoom": 1,
+            "x": 0,
+            "y": 0,
+            "easing": "easeInOut"
+          }
+        ]
+      },
+      "annotations": [],
+      "textOverlays": [
+        {
+          "id": "df7252b3-2ac5-4b6d-a282-f0e2e5f745bf",
+          "kind": "move-label",
+          "text": "Bb5",
+          "font": "display",
+          "fontSize": 64,
+          "color": "foreground",
+          "align": "center",
+          "position": "bottom",
+          "x": 0,
+          "y": 0,
+          "maxWidth": 80,
+          "background": false,
+          "startFrame": 20,
+          "durationInFrames": 80
+        }
+      ],
+      "effects": {
+        "lastMoveHighlight": true,
+        "checkIndicator": true,
+        "captureEmphasis": true,
+        "checkmateEmphasis": true,
+        "glow": false,
+        "focus": false
+      },
+      "focusSquares": [],
+      "audioEvents": [
+        {
+          "id": "af1f0b41-0bc1-4891-8264-43e7a634bf68",
+          "trigger": "move",
+          "frameOffset": 0,
+          "volume": 0.5,
+          "muted": false
+        }
+      ],
+      "overrides": {},
+      "schemaVersion": 2,
+      "id": "33333333-3333-4333-8333-333333333333",
+      "moveRange": {
+        "fromPly": 4,
+        "toPly": 6
+      }
+    },
+    {
+      "type": "outro",
+      "startFrame": 285,
+      "durationInFrames": 45,
+      "boardState": {
+        "fen": "r1bqk2r/1pppbppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 4 6",
+        "orientation": "w",
+        "theme": "forge",
+        "coordinates": true
+      },
+      "timing": {
+        "leadInFrames": 12,
+        "moveDurationFrames": 24,
+        "gapFrames": 6,
+        "holdFrames": 24,
+        "easing": "easeInOut"
+      },
+      "camera": {
+        "keyframes": [
+          {
+            "frame": 0,
+            "zoom": 1,
+            "x": 0,
+            "y": 0,
+            "easing": "easeInOut"
+          }
+        ]
+      },
+      "annotations": [],
+      "textOverlays": [
+        {
+          "id": "c5f03538-8b47-4b50-b50a-9bbc5fd36615",
+          "kind": "caption",
+          "text": "White vs Black",
+          "font": "body",
+          "fontSize": 24,
+          "color": "muted",
+          "align": "center",
+          "position": "bottom",
+          "x": 0,
+          "y": 0,
+          "maxWidth": 80,
+          "background": false,
+          "startFrame": 0,
+          "durationInFrames": 45
+        }
+      ],
+      "effects": {
+        "lastMoveHighlight": true,
+        "checkIndicator": true,
+        "captureEmphasis": true,
+        "checkmateEmphasis": true,
+        "glow": false,
+        "focus": false
+      },
+      "focusSquares": [],
+      "audioEvents": [],
+      "overrides": {},
+      "schemaVersion": 2,
+      "id": "44444444-4444-4444-8444-444444444444"
+    }
+  ],
+  "gameSnapshot": {
+    "metadata": {
+      "white": "White",
+      "black": "Black",
+      "result": "*",
+      "event": "R4 fixture",
+      "site": "local",
+      "date": "2024.01.01"
+    },
+    "initialFen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "moves": [
+      {
+        "ply": 1,
+        "fullMoveNumber": 1,
+        "color": "w",
+        "san": "e4",
+        "uci": "e2e4",
+        "fenBefore": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "fenAfter": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+      },
+      {
+        "ply": 2,
+        "fullMoveNumber": 1,
+        "color": "b",
+        "san": "e5",
+        "uci": "e7e5",
+        "fenBefore": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+        "fenAfter": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"
+      },
+      {
+        "ply": 3,
+        "fullMoveNumber": 2,
+        "color": "w",
+        "san": "Nf3",
+        "uci": "g1f3",
+        "fenBefore": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+        "fenAfter": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
+      },
+      {
+        "ply": 4,
+        "fullMoveNumber": 2,
+        "color": "b",
+        "san": "Nc6",
+        "uci": "b8c6",
+        "fenBefore": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+        "fenAfter": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3"
+      },
+      {
+        "ply": 5,
+        "fullMoveNumber": 3,
+        "color": "w",
+        "san": "Bb5",
+        "uci": "f1b5",
+        "fenBefore": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+        "fenAfter": "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3"
+      },
+      {
+        "ply": 6,
+        "fullMoveNumber": 3,
+        "color": "b",
+        "san": "a6",
+        "uci": "a7a6",
+        "fenBefore": "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
+        "fenAfter": "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4"
+      },
+      {
+        "ply": 7,
+        "fullMoveNumber": 4,
+        "color": "w",
+        "san": "Ba4",
+        "uci": "b5a4",
+        "fenBefore": "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4",
+        "fenAfter": "r1bqkbnr/1ppp1ppp/p1n5/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 1 4"
+      },
+      {
+        "ply": 8,
+        "fullMoveNumber": 4,
+        "color": "b",
+        "san": "Nf6",
+        "uci": "g8f6",
+        "fenBefore": "r1bqkbnr/1ppp1ppp/p1n5/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 1 4",
+        "fenAfter": "r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 5"
+      },
+      {
+        "ply": 9,
+        "fullMoveNumber": 5,
+        "color": "w",
+        "san": "O-O",
+        "uci": "e1g1",
+        "fenBefore": "r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 5",
+        "fenAfter": "r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 3 5"
+      },
+      {
+        "ply": 10,
+        "fullMoveNumber": 5,
+        "color": "b",
+        "san": "Be7",
+        "uci": "f8e7",
+        "fenBefore": "r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 3 5",
+        "fenAfter": "r1bqk2r/1pppbppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 4 6"
+      }
+    ]
+  },
+  "tracks": {
+    "text": [],
+    "annotation": [],
+    "audio": []
+  },
+  "audioTracks": [
+    {
+      "id": "55555555-5555-4555-8555-555555555555",
+      "kind": "sfx",
+      "source": {
+        "type": "builtin",
+        "id": "move"
+      },
+      "startFrame": 0,
+      "durationInFrames": 18,
+      "volume": 0.3,
+      "muted": false,
+      "loop": false
+    }
+  ],
+  "assets": [],
+  "createdAt": "2026-11-23T00:00:00.000Z",
+  "updatedAt": "2026-11-23T00:00:00.000Z",
+  "schemaVersion": 2
+}

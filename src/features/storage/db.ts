@@ -13,11 +13,8 @@ import {
   type ApplicationSettings,
   applicationSettingsSchema,
 } from "@/features/settings/types";
-import {
-  type Scene,
-  type VideoProject,
-  videoProjectSchema,
-} from "@/features/studio/scene/scene.types";
+import { normalizeProject } from "@/features/studio/scene/project-normalization";
+import type { Scene, VideoProject } from "@/features/studio/scene/scene.types";
 import { type Template, templateSchema } from "@/features/templates/types";
 import {
   StorageMigrationError,
@@ -335,17 +332,29 @@ export function createGameRepository(db: ChessForgeDatabase): GameRepository {
 export function createProjectRepository(
   db: ChessForgeDatabase,
 ): ProjectRepository {
+  const normalizeStored = (record: unknown) => {
+    try {
+      return normalizeProject(record);
+    } catch {
+      throw new ValidationError(
+        "Stored project data is invalid.",
+        "Export a backup, then clear site data before re-importing.",
+      );
+    }
+  };
+
   return {
-    getById: async (id) =>
-      parseStored(await db.get("projects", id), videoProjectSchema, "project"),
-    list: async () =>
-      parseStoredList(
-        await db.getAll("projects"),
-        videoProjectSchema,
-        "project",
-      ),
+    getById: async (id) => {
+      const record = await db.get("projects", id);
+      if (record === undefined) return undefined;
+      return normalizeStored(record);
+    },
+    list: async () => {
+      const records = await db.getAll("projects");
+      return records.map(normalizeStored);
+    },
     save: async (project) => {
-      await db.put("projects", videoProjectSchema.parse(project));
+      await db.put("projects", normalizeStored(project));
     },
     delete: (id) => db.delete("projects", id),
   };

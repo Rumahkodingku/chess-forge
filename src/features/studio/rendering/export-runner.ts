@@ -1,9 +1,11 @@
-import { SceneComposition } from "@/features/studio/rendering/scene-composition";
+import { ProjectComposition } from "@/features/studio/rendering/project-composition";
+import { projectDurationInFrames } from "@/features/studio/rendering/timeline";
 import type { VideoProject } from "@/features/studio/scene/scene.types";
 import { UnsupportedCapabilityError } from "@/lib/errors";
 
 export interface ExportProjectRequest {
   project: VideoProject;
+  resolvedAudioAssets?: Record<string, string>;
   container: "webm" | "mp4";
   videoCodec: "vp9" | "vp8" | "h264";
   audioCodec: "opus" | "aac";
@@ -20,13 +22,15 @@ export interface ExportProjectResult {
 export async function exportProject(
   request: ExportProjectRequest,
 ): Promise<ExportProjectResult> {
-  const scene = request.project.scenes[0];
-  if (!scene) {
+  if (!request.project.scenes.length) {
     throw new UnsupportedCapabilityError(
       "This project has no scene to render.",
       "Open the project and create a scene first.",
     );
   }
+
+  const durationInFrames = projectDurationInFrames(request.project);
+  const resolvedAudioAssets = request.resolvedAudioAssets ?? {};
 
   const { canRenderMediaOnWeb, renderMediaOnWeb } = await import(
     "@remotion/web-renderer"
@@ -52,20 +56,20 @@ export async function exportProject(
   const result = await renderMediaOnWeb({
     composition: {
       id: `chessforge-${request.project.id}`,
-      component: SceneComposition,
+      component: ProjectComposition,
       width: request.project.canvas.width,
       height: request.project.canvas.height,
       fps: request.project.frameRate,
-      durationInFrames: scene.durationInFrames,
+      durationInFrames,
       calculateMetadata: null,
       defaultProps: {
         project: request.project,
-        scene,
+        resolvedAudioAssets,
       },
     },
     inputProps: {
       project: request.project,
-      scene,
+      resolvedAudioAssets,
     },
     container: request.container,
     videoCodec: request.videoCodec,

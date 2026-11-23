@@ -154,6 +154,66 @@ describe("IndexedDB repositories", () => {
     expect(stored?.scenes[0]?.durationInFrames).toBe(90);
   });
 
+  it("reports an invalid project on save", async () => {
+    const db = await openChessForgeDatabase();
+    const game = parseSinglePgn(PGN);
+    const project = createWalkingSkeletonProject({ game, selectedPly: 1 });
+    const repository = createProjectRepository(db);
+
+    await expect(
+      repository.save({ ...project, name: "" } as never),
+    ).rejects.toThrow("Stored project data is invalid");
+  });
+
+  it("normalises a v1 project at the repository boundary", async () => {
+    const db = await openChessForgeDatabase();
+    const repository = createProjectRepository(db);
+    const game = parseSinglePgn(PGN);
+    const project = createWalkingSkeletonProject({ game, selectedPly: 1 });
+    const legacy = {
+      ...project,
+      projectVersion: 1,
+      schemaVersion: 1,
+      audioTracks: undefined,
+      scenes: project.scenes.map((scene) => ({
+        id: scene.id,
+        type: scene.type,
+        startFrame: scene.startFrame,
+        durationInFrames: scene.durationInFrames,
+        moveRange: scene.moveRange,
+        boardState: {
+          fen: scene.boardState.fen,
+          orientation: scene.boardState.orientation,
+        },
+        camera: { zoom: 1, x: 0, y: 0 },
+        annotations: [],
+        textOverlays: scene.textOverlays.map((overlay) => ({
+          id: overlay.id,
+          kind: overlay.kind,
+          text: overlay.text,
+          position: overlay.position,
+          startFrame: overlay.startFrame,
+          durationInFrames: overlay.durationInFrames,
+        })),
+        effects: {
+          lastMoveHighlight: true,
+          checkIndicator: true,
+          captureEmphasis: true,
+          glow: false,
+        },
+        audioReferences: [],
+        overrides: {},
+        schemaVersion: 1,
+      })),
+    };
+    await db.put("projects", legacy as never);
+
+    const stored = await repository.getById(project.id);
+    expect(stored?.projectVersion).toBe(2);
+    expect(stored?.scenes[0]?.timing.leadInFrames).toBe(10);
+    expect(stored?.scenes[0]?.boardState.theme).toBe("forge");
+  });
+
   it("deduplicates assets by hash lookup", async () => {
     const db = await openChessForgeDatabase();
     const repository = createAssetRepository(db);

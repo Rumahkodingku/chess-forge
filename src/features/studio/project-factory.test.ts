@@ -21,7 +21,10 @@ describe("walking skeleton project factory", () => {
       height: 1920,
     });
     expect(project.frameRate).toBe(30);
+    expect(project.projectVersion).toBe(2);
+    expect(project.schemaVersion).toBe(2);
     expect(project.scenes).toHaveLength(1);
+    expect(project.audioTracks).toEqual([]);
     expect(project.gameSnapshot?.moves).toHaveLength(10);
     expect(project.gameSnapshot?.metadata.white).toBe("White");
   });
@@ -33,8 +36,16 @@ describe("walking skeleton project factory", () => {
     expect(scene.type).toBe("move");
     expect(scene.moveRange).toEqual({ fromPly: 1, toPly: 1 });
     expect(scene.boardState.fen).toBe(game.moves[0]?.fenBefore);
-    expect(scene.boardState.lastMove).toBe("e2e4");
+    expect(scene.boardState.theme).toBe("forge");
     expect(scene.textOverlays[0]?.text).toBe("1. e4");
+    expect(scene.timing).toEqual({
+      leadInFrames: 10,
+      moveDurationFrames: 45,
+      gapFrames: 0,
+      holdFrames: 35,
+      easing: "easeInOut",
+    });
+    expect(scene.audioEvents[0]?.trigger).toBe("move");
   });
 
   it("formats a black move label correctly", () => {

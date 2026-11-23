@@ -16,5 +16,6 @@
 | [0012](0012-production-e2e-gate.md) | Production E2E gate |
 | [0013](0013-game-import-and-replay.md) | Game import and replay |
 | [0014](0014-analysis-pipeline.md) | Analysis pipeline and heuristics |
+| [0015](0015-animation-core.md) | Animation core |
 
 Add a new ADR before changing an accepted decision. Keep the status line current.

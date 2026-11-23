@@ -57,7 +57,7 @@ export default function StudioPage() {
     <div className="space-y-6">
       <PageHeader
         title="Studio"
-        description="One scene, one move, one export. R1 projects are deliberately small, but the path from game to video is real."
+        description="Preview saved scene sequences with deterministic board animation, camera, text, effects, and audio. Timeline editing arrives in R5."
         actions={
           <Button asChild className="h-10 px-4">
             <Link href="/analysis">Start from analysis</Link>

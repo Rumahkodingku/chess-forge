@@ -33,14 +33,15 @@ import {
   type ExportFixtureVariant,
 } from "@/features/studio/rendering/export-fixture";
 import { exportProject } from "@/features/studio/rendering/export-runner";
-import { SceneComposition } from "@/features/studio/rendering/scene-composition";
+import { ProjectComposition } from "@/features/studio/rendering/project-composition";
+import { projectDurationInFrames } from "@/features/studio/rendering/timeline";
 
 const Player = dynamic(
   () => import("@remotion/player").then((module) => module.Player),
   { ssr: false },
 );
 
-const ScenePlayer = SceneComposition as unknown as ComponentType<
+const ProjectPlayer = ProjectComposition as unknown as ComponentType<
   Record<string, unknown>
 >;
 
@@ -281,9 +282,9 @@ export default function ExportLabPage() {
             >
               {scene ? (
                 <Player
-                  component={ScenePlayer}
-                  inputProps={{ project, scene }}
-                  durationInFrames={scene.durationInFrames}
+                  component={ProjectPlayer}
+                  inputProps={{ project, resolvedAudioAssets: {} }}
+                  durationInFrames={projectDurationInFrames(project)}
                   compositionWidth={project.canvas.width}
                   compositionHeight={project.canvas.height}
                   fps={project.frameRate}

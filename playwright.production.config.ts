@@ -6,6 +6,7 @@ export default defineConfig({
     "r1-walking-skeleton.spec.ts",
     "r2-production.spec.ts",
     "r3-production.spec.ts",
+    "r4-production.spec.ts",
   ],
   fullyParallel: false,
   workers: 1,
