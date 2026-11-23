@@ -1,7 +1,4 @@
-import {
-  chooseOutputTarget,
-  shouldUseOpfs,
-} from "@/features/studio/export/capabilities";
+import { shouldUseOpfs } from "@/features/studio/export/capabilities";
 import {
   type ExportConfig,
   qualitySettings,
@@ -61,7 +58,7 @@ export async function exportProject(
 ): Promise<ExportProjectResult> {
   if (!request.project.scenes.length) {
     throw new ExportError(
-      "render",
+      "validation",
       "This project has no scene to render.",
       "Open the project and add a scene first.",
     );
@@ -69,6 +66,13 @@ export async function exportProject(
 
   const durationInFrames = projectDurationInFrames(request.project);
   const durationSeconds = durationInFrames / request.project.frameRate;
+  if (durationSeconds > 15 * 60) {
+    throw new ExportError(
+      "validation",
+      "This project is longer than the 15-minute export cap.",
+      "Shorten the timeline before exporting.",
+    );
+  }
   const { width, height } = resolutionDimensions(
     request.project.canvas.aspectRatio,
     request.config.resolution,
@@ -76,12 +80,19 @@ export async function exportProject(
   const quality = qualitySettings(request.config.quality);
   const hasAudio = projectHasAudio(request.project);
   const includeAudio = request.config.includeAudio && hasAudio;
-  const selectedTarget = chooseOutputTarget({
-    durationSeconds,
-    opfsAvailable: opfsAvailable(),
-    webFsSupported: true,
-  });
+  const resolvedAudioAssets = request.resolvedAudioAssets ?? {};
+  const resolvedHasAudio =
+    request.project.scenes.some((scene) =>
+      scene.audioEvents.some((event) => !event.muted),
+    ) ||
+    request.project.audioTracks.some(
+      (track) =>
+        !track.muted &&
+        (track.source.type === "builtin" ||
+          Boolean(resolvedAudioAssets[track.source.assetId])),
+    );
   const preferOpfs = shouldUseOpfs(durationSeconds, opfsAvailable());
+  const selectedTarget = preferOpfs ? "web-fs" : "arraybuffer";
 
   const { canRenderMediaOnWeb, renderMediaOnWeb } = await import(
     "@remotion/web-renderer"
@@ -92,6 +103,7 @@ export async function exportProject(
       container: request.config.container,
       videoCodec: request.config.videoCodec,
       audioCodec: includeAudio ? request.config.audioCodec : null,
+      muted: !includeAudio,
       width,
       height,
       outputTarget: target,
@@ -115,8 +127,8 @@ export async function exportProject(
   }
 
   const snapshot = structuredClone(request.project);
-  try {
-    const result = await renderMediaOnWeb({
+  async function render(target: "web-fs" | "arraybuffer") {
+    return renderMediaOnWeb({
       composition: {
         id: `chessforge-${snapshot.id}`,
         component: ProjectComposition,
@@ -127,20 +139,17 @@ export async function exportProject(
         calculateMetadata: null,
         defaultProps: {
           project: snapshot,
-          resolvedAudioAssets: request.resolvedAudioAssets ?? {},
+          resolvedAudioAssets,
         },
       },
-      inputProps: {
-        project: snapshot,
-        resolvedAudioAssets: request.resolvedAudioAssets ?? {},
-      },
+      inputProps: { project: snapshot, resolvedAudioAssets },
       container: request.config.container,
       videoCodec: request.config.videoCodec,
       audioCodec: includeAudio ? request.config.audioCodec : null,
       videoBitrate: quality.videoBitrate,
       audioBitrate: quality.audioBitrate,
       muted: !includeAudio,
-      outputTarget,
+      outputTarget: target,
       licenseKey: "free-license",
       signal: request.signal,
       onProgress: (progress) => {
@@ -152,7 +161,25 @@ export async function exportProject(
         });
       },
     });
+  }
+
+  try {
+    let result: Awaited<ReturnType<typeof render>>;
+    try {
+      result = await render(outputTarget);
+    } catch (renderError) {
+      if (outputTarget === "web-fs" && preferOpfs && !request.signal.aborted) {
+        outputTarget = "arraybuffer";
+        fallbackFromOpfs = true;
+        result = await render(outputTarget);
+      } else {
+        throw renderError;
+      }
+    }
     const blob = await result.getBlob();
+    if (request.signal.aborted) {
+      throw new DOMException("Export cancelled.", "AbortError");
+    }
     const metadata = await validateExportFile(blob, {
       container: request.config.container,
       videoCodec: request.config.videoCodec,
@@ -162,8 +189,11 @@ export async function exportProject(
       durationSeconds,
       frameRate: snapshot.frameRate,
       includeAudio,
-      projectHasAudio: hasAudio,
+      projectHasAudio: resolvedHasAudio,
     });
+    if (request.signal.aborted) {
+      throw new DOMException("Export cancelled.", "AbortError");
+    }
     return {
       blob,
       extension: request.config.container,
@@ -187,10 +217,17 @@ export async function exportProject(
     ) {
       throw error;
     }
+    const message =
+      error instanceof Error ? error.message : "The export could not render.";
+    const storageFailure = /memory|allocat|quota|storage|disk|buffer/i.test(
+      message,
+    );
     throw new ExportError(
-      "render",
-      error instanceof Error ? error.message : "The export could not render.",
-      "Retry the export, choose WebM, or lower the resolution.",
+      storageFailure ? "storage" : "render",
+      message,
+      storageFailure
+        ? "Lower the resolution, shorten the project, or choose WebM."
+        : "Retry the export, choose WebM, or lower the resolution.",
     );
   }
 }

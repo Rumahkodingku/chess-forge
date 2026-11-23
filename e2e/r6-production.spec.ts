@@ -62,6 +62,7 @@ test("R6 production export produces a validated 720p WebM", async ({
   const metadata = JSON.parse(
     output.slice(output.indexOf("{"), output.lastIndexOf("}") + 1),
   ) as {
+    container: string;
     duration: number;
     video: { codec: string; width: number; height: number };
     audio: { codec: string } | null;

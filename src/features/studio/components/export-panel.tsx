@@ -110,10 +110,11 @@ export function ExportPanel({
   const [capabilities, setCapabilities] = useState<CapabilityView[]>([]);
   const [checking, setChecking] = useState(true);
   const [capabilityError, setCapabilityError] = useState<string | null>(null);
+  const [capabilityRetry, setCapabilityRetry] = useState(0);
   const [status, setStatus] = useState<ExportStatus>("checking");
   const [progress, setProgress] = useState<ExportProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [memoryWarning, setMemoryWarning] = useState(false);
+  const [fallbackWarning, setFallbackWarning] = useState(false);
   const [result, setResult] = useState<{
     url: string;
     size: number;
@@ -121,7 +122,9 @@ export function ExportPanel({
     extension: "mp4" | "webm";
   } | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
+  const renderingRef = useRef(false);
   const urlRef = useRef<string | null>(null);
+  const exportAudioUrlsRef = useRef<string[]>([]);
 
   const durationFrames = projectDurationInFrames(project);
   const durationSeconds = durationFrames / project.frameRate;
@@ -134,6 +137,11 @@ export function ExportPanel({
       )?.format,
     [capabilities, formatId],
   );
+  const selectedCapability = capabilities.find(
+    (entry) => entry.format.id === selectedFormat?.id,
+  );
+  const memoryWarning =
+    durationSeconds >= 60 && selectedCapability?.outputTarget === "arraybuffer";
 
   useEffect(() => {
     let cancelled = false;
@@ -161,7 +169,9 @@ export function ExportPanel({
     setFileName(defaultExportName(project.name, resolution));
   }, [fileNameDirty, project.name, resolution]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: retry key intentionally reruns the check
   useEffect(() => {
+    if (renderingRef.current) return;
     let cancelled = false;
     setChecking(true);
     setCapabilityError(null);
@@ -181,6 +191,7 @@ export function ExportPanel({
             container: format.container,
             videoCodec: format.videoCodec,
             audioCodec: audioCodec ? format.audioCodec : null,
+            muted: !audioCodec,
             width: resolutionDimensions(project.canvas.aspectRatio, resolution)
               .width,
             height: resolutionDimensions(project.canvas.aspectRatio, resolution)
@@ -213,14 +224,8 @@ export function ExportPanel({
         setFormatId(
           (current) => resolveSelectedFormat(entries, current)?.id ?? current,
         );
-        setMemoryWarning(
-          preferOpfs &&
-            entries.some((entry) => entry.fallbackFromOpfs && entry.canRender),
-        );
         setChecking(false);
-        setStatus((current) =>
-          current === "checking" || current === "ready" ? "ready" : current,
-        );
+        setStatus((current) => (current === "rendering" ? current : "ready"));
       } catch (checkError) {
         if (!cancelled) {
           setCapabilityError(errorMessage(checkError));
@@ -239,12 +244,15 @@ export function ExportPanel({
     includeAudio,
     project.canvas.aspectRatio,
     resolution,
+    capabilityRetry,
   ]);
 
   useEffect(() => {
     return () => {
       controllerRef.current?.abort();
       if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+      for (const url of exportAudioUrlsRef.current) URL.revokeObjectURL(url);
+      exportAudioUrlsRef.current = [];
     };
   }, []);
 
@@ -266,14 +274,35 @@ export function ExportPanel({
     setResult(null);
   }
 
+  async function cloneAudioUrls(
+    assets: Record<string, string>,
+  ): Promise<Record<string, string>> {
+    const cloned: Record<string, string> = {};
+    for (const [id, url] of Object.entries(assets)) {
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const clone = URL.createObjectURL(blob);
+        exportAudioUrlsRef.current.push(clone);
+        cloned[id] = clone;
+      } catch {
+        // Missing audio stays a warning; the render continues.
+      }
+    }
+    return cloned;
+  }
+
   async function startExport() {
     if (!selectedFormat || durationState === "blocked") return;
+    controllerRef.current?.abort();
     clearResult();
     setError(null);
+    setFallbackWarning(false);
     setProgress(null);
     setStatus("rendering");
     const controller = new AbortController();
     controllerRef.current = controller;
+    renderingRef.current = true;
     const started = performance.now();
     const config: ExportConfig = {
       container: selectedFormat.container,
@@ -285,13 +314,19 @@ export function ExportPanel({
       fileName: sanitizeExportName(fileName),
     };
     try {
+      const audioAssets = await cloneAudioUrls(resolvedAudioAssets);
       const output = await exportProject({
         project,
         config,
-        resolvedAudioAssets,
+        resolvedAudioAssets: audioAssets,
         signal: controller.signal,
         onProgress: setProgress,
       });
+      if (controller.signal.aborted || controllerRef.current !== controller) {
+        setStatus("cancelled");
+        setProgress(null);
+        return;
+      }
       const url = URL.createObjectURL(output.blob);
       urlRef.current = url;
       setResult({
@@ -301,9 +336,10 @@ export function ExportPanel({
         extension: output.extension,
       });
       setProgress((current) => (current ? { ...current, percent: 100 } : null));
+      setFallbackWarning(output.fallbackFromOpfs);
       setStatus("done");
-      setMemoryWarning((current) => current || output.fallbackFromOpfs);
     } catch (exportFailure) {
+      if (controllerRef.current !== controller) return;
       if (controller.signal.aborted) {
         setStatus("cancelled");
         setProgress(null);
@@ -312,7 +348,12 @@ export function ExportPanel({
         setError(errorMessage(exportFailure));
       }
     } finally {
-      controllerRef.current = null;
+      renderingRef.current = false;
+      if (controllerRef.current === controller) {
+        controllerRef.current = null;
+      }
+      for (const url of exportAudioUrlsRef.current) URL.revokeObjectURL(url);
+      exportAudioUrlsRef.current = [];
     }
   }
 
@@ -324,9 +365,6 @@ export function ExportPanel({
 
   const blocked = durationState === "blocked";
   const noFormat = !selectedFormat;
-  const selectedCapability = capabilities.find(
-    (entry) => entry.format.id === selectedFormat?.id,
-  );
   const extension = selectedFormat?.extension ?? "webm";
   const downloadName = projectFileName(fileName, extension);
   const exporting = status === "rendering";
@@ -467,7 +505,12 @@ export function ExportPanel({
             Include audio
           </label>
           <span className="text-[10px] text-muted-foreground">
-            {durationSeconds.toFixed(1)}s · {durationState}
+            {durationSeconds.toFixed(1)}s ·{" "}
+            {durationState === "ok"
+              ? "ready"
+              : durationState === "warning"
+                ? "over 5 min"
+                : "over 15 min"}
           </span>
         </div>
 
@@ -500,16 +543,26 @@ export function ExportPanel({
             timeline before exporting.
           </p>
         ) : null}
-        {memoryWarning ? (
+        {memoryWarning || fallbackWarning ? (
           <p className="text-[11px] text-amber-200">
             OPFS is unavailable. This long export uses memory; lower the
             resolution if the browser runs out.
           </p>
         ) : null}
         {capabilityError ? (
-          <p role="alert" className="text-[11px] text-destructive">
-            {capabilityError}
-          </p>
+          <div className="space-y-1">
+            <p role="alert" className="text-[11px] text-destructive">
+              {capabilityError}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setCapabilityRetry((current) => current + 1)}
+            >
+              Retry capability check
+            </Button>
+          </div>
         ) : null}
         {noFormat && !checking ? (
           <p className="text-[11px] text-destructive">

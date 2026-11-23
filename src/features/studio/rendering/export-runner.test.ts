@@ -179,4 +179,139 @@ describe("exportProject", () => {
       }),
     ).rejects.toThrow(/cancelled/);
   });
+  it("rejects a project over fifteen minutes", async () => {
+    const project = normalizeProject(fixture);
+    const last = project.scenes.at(-1);
+    if (!last) throw new Error("Missing scene");
+    const longProject = {
+      ...project,
+      scenes: project.scenes.map((scene) =>
+        scene.id === last.id
+          ? { ...scene, durationInFrames: 15 * 60 * project.frameRate + 1 }
+          : scene,
+      ),
+    };
+    await expect(
+      exportProject({
+        project: longProject,
+        config,
+        signal: new AbortController().signal,
+        onProgress: vi.fn(),
+      }),
+    ).rejects.toThrow(/15-minute/);
+    expect(mocks.renderMediaOnWeb).not.toHaveBeenCalled();
+  });
+
+  it("does not expose a result when validation fails", async () => {
+    mocks.validateExportFile.mockRejectedValue(
+      new Error("The container changed"),
+    );
+    await expect(
+      exportProject({
+        project: normalizeProject(fixture),
+        config,
+        signal: new AbortController().signal,
+        onProgress: vi.fn(),
+      }),
+    ).rejects.toThrow(/export could not render|container changed/i);
+  });
+
+  it("checks cancellation after the blob is produced", async () => {
+    const controller = new AbortController();
+    mocks.renderMediaOnWeb.mockResolvedValue({
+      getBlob: async () => {
+        controller.abort();
+        return new Blob(["video"]);
+      },
+    });
+    await expect(
+      exportProject({
+        project: normalizeProject(fixture),
+        config,
+        signal: controller.signal,
+        onProgress: vi.fn(),
+      }),
+    ).rejects.toThrow(/cancelled/i);
+    expect(mocks.validateExportFile).not.toHaveBeenCalled();
+  });
+
+  it("does not require audio when only missing assets are referenced", async () => {
+    const project = normalizeProject(fixture);
+    const silent = {
+      ...project,
+      scenes: project.scenes.map((scene) => ({
+        ...scene,
+        audioEvents: [],
+      })),
+      audioTracks: [
+        {
+          id: "missing",
+          kind: "music" as const,
+          source: { type: "asset" as const, assetId: "missing" },
+          startFrame: 0,
+          durationInFrames: 30,
+          volume: 0.5,
+          muted: false,
+          loop: false,
+        },
+      ],
+    };
+    await exportProject({
+      project: silent,
+      config,
+      resolvedAudioAssets: {},
+      signal: new AbortController().signal,
+      onProgress: vi.fn(),
+    });
+    expect(mocks.validateExportFile).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ projectHasAudio: false, includeAudio: true }),
+    );
+  });
+
+  it("retries once with arraybuffer after an OPFS render failure", async () => {
+    const project = normalizeProject(fixture);
+    const last = project.scenes.at(-1);
+    if (!last) throw new Error("Missing scene");
+    const longProject = {
+      ...project,
+      scenes: project.scenes.map((scene) =>
+        scene.id === last.id
+          ? { ...scene, durationInFrames: 60 * project.frameRate }
+          : scene,
+      ),
+    };
+    mocks.renderMediaOnWeb
+      .mockRejectedValueOnce(new Error("OPFS write failed"))
+      .mockResolvedValueOnce({ getBlob: async () => new Blob(["video"]) });
+    const result = await exportProject({
+      project: longProject,
+      config,
+      signal: new AbortController().signal,
+      onProgress: vi.fn(),
+    });
+    expect(result.fallbackFromOpfs).toBe(true);
+    expect(mocks.renderMediaOnWeb).toHaveBeenCalledTimes(2);
+    expect(mocks.renderMediaOnWeb).toHaveBeenLastCalledWith(
+      expect.objectContaining({ outputTarget: "arraybuffer" }),
+    );
+  });
+  it("renders a snapshot without mutating the live project", async () => {
+    const project = normalizeProject(fixture);
+    mocks.renderMediaOnWeb.mockImplementation(
+      async (options: {
+        composition: { defaultProps: { project: { name: string } } };
+      }) => {
+        options.composition.defaultProps.project.name = "Mutated";
+        return { getBlob: async () => new Blob(["video"]) };
+      },
+    );
+    await exportProject({
+      project,
+      config,
+      signal: new AbortController().signal,
+      onProgress: vi.fn(),
+    });
+    expect(project.name).not.toBe("Mutated");
+  });
 });

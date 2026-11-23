@@ -82,6 +82,7 @@ test.describe("R6 export", () => {
     const filePath = testInfo.outputPath("r6-export.webm");
     await download.saveAs(filePath);
     const metadata = probe(filePath);
+    expect(metadata.container).toContain("webm");
     expect(metadata.video.codec).toBe("vp9");
     expect(metadata.video.width).toBe(720);
     expect(metadata.video.height).toBe(1280);
@@ -98,9 +99,9 @@ test.describe("R6 export", () => {
 
     page.once("dialog", (dialog) => dialog.accept());
     await page.getByLabel("Frame rate").selectOption("60");
-    await expect(page.getByText("1.5s · ok")).toBeVisible();
+    await expect(page.getByText("1.5s · ready")).toBeVisible();
     await page.getByRole("button", { name: "Undo" }).click();
-    await expect(page.getByText("3.0s · ok")).toBeVisible();
+    await expect(page.getByText("3.0s · ready")).toBeVisible();
 
     await page.getByLabel("Export aspect ratio").selectOption("16:9");
     await expect(page.getByText("1920 x 1080")).toBeVisible();
@@ -152,6 +153,7 @@ test.describe("R6 export", () => {
     const filePath = testInfo.outputPath("r6-export.mp4");
     await download.saveAs(filePath);
     const metadata = probe(filePath);
+    expect(metadata.container).toContain("mp4");
     expect(metadata.video.codec).toBe("h264");
     expect(metadata.video.width).toBe(720);
     expect(metadata.video.height).toBe(1280);
