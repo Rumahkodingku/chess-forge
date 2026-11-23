@@ -110,7 +110,7 @@ test.describe("R5 video studio", () => {
       timeout: 15_000,
     });
 
-    await page.getByLabel("Aspect ratio").selectOption("16:9");
+    await page.getByLabel("Aspect ratio", { exact: true }).selectOption("16:9");
     await expect(page.getByText("1920 x 1080")).toBeVisible();
     await expect(page.getByText("Saved", { exact: true }).first()).toBeVisible({
       timeout: 10_000,

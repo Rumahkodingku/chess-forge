@@ -47,7 +47,7 @@ test("R5 production project opens, seeks, and changes aspect ratio", async ({
     String(fixture.scenes[1]?.startFrame ?? 0),
   );
 
-  await page.getByLabel("Aspect ratio").selectOption("1:1");
+  await page.getByLabel("Aspect ratio", { exact: true }).selectOption("1:1");
   await expect(page.getByText("1080 x 1080")).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
