@@ -47,7 +47,7 @@ Production E2E coverage:
 Reference run: production build, five scenes, 584 frames, 1080 x 1920, Chromium headless.
 
 ```text
-Preview animation frame rate: 60.3 FPS
+Preview animation frame rate: 60.4 FPS
 MOBILE overflow: 0
 Console errors: 0
 Known warning: Mediabunny loaded twice (pre-existing R0 warning)
