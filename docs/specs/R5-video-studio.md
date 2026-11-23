@@ -50,21 +50,21 @@ R5 must not create a second renderer. Preview and export continue to use `Projec
 
 ### 2.3 Approved decisions
 
-| Topic | Decision |
-|---|---|
-| Full-game grouping | One scene per three plies, plus optional intro and outro |
-| Critical moments | One scene per moment block, with configurable leading and trailing plies |
-| Manual range | One contiguous move range |
-| Template model | Project stores a full template snapshot |
-| Template application | Apply style non-destructively, or regenerate scenes with confirmation |
-| Custom template | Stores rules and defaults only, never moves or scene IDs |
-| Editor depth | Full scene editor, including audio upload |
-| Autosave | Debounced 800 ms with visible save state and retry |
-| Undo | 20 project snapshots |
-| Aspect ratios | 9:16, 16:9, 1:1, 4:5 |
-| Template presets | Defined by this spec using existing R4 tokens only |
-| Project version | Project v3; IndexedDB stays at version 1 |
-| Timeline depth | Scene strip plus track rows, no timeline zoom |
+| Topic                | Decision                                                                 |
+| -------------------- | ------------------------------------------------------------------------ |
+| Full-game grouping   | One scene per three plies, plus optional intro and outro                 |
+| Critical moments     | One scene per moment block, with configurable leading and trailing plies |
+| Manual range         | One contiguous move range                                                |
+| Template model       | Project stores a full template snapshot                                  |
+| Template application | Apply style non-destructively, or regenerate scenes with confirmation    |
+| Custom template      | Stores rules and defaults only, never moves or scene IDs                 |
+| Editor depth         | Full scene editor, including audio upload                                |
+| Autosave             | Debounced 800 ms with visible save state and retry                       |
+| Undo                 | 20 project snapshots                                                     |
+| Aspect ratios        | 9:16, 16:9, 1:1, 4:5                                                     |
+| Template presets     | Defined by this spec using existing R4 tokens only                       |
+| Project version      | Project v3; IndexedDB stays at version 1                                 |
+| Timeline depth       | Scene strip plus track rows, no timeline zoom                            |
 
 ---
 
@@ -280,15 +280,15 @@ interface AudioTrackTemplate {
 
 All seven templates use existing R4 tokens, themes, effects, text styles, timing, and audio events. No new fonts, colours, piece sets, or asset types are introduced.
 
-| ID | Name | Default source | Scene grouping | Intro / outro | Visual and audio character |
-|---|---|---|---|---|---|
-| `cinematic-chess` | Cinematic Chess | Full game | 4 plies | 75 / 75 | forge, glow off, zoom 1.15, title and caption, move SFX 0.35 |
-| `tactical-breakdown` | Tactical Breakdown | Critical moments | One scene per moment block | 45 / 45 | forge, capture/check focus, arrows, explanation from R3 reason, SFX 0.5 |
-| `brilliant-move` | Brilliant Move | Brilliant moments | One scene per moment block | 60 / 60 | forge, glow on, zoom 1.4, brand annotation, caption |
-| `checkmate-sequence` | Checkmate Sequence | Final six plies | 2 plies | 45 / 60 | forge, checkmate emphasis, glow on, result outro, checkmate SFX |
-| `minimalist-analysis` | Minimalist Analysis | Full game | 4 plies | 45 / 45 | forge, coordinates off, zoom 1.0, small body captions, SFX 0.25 |
-| `opening-tutorial` | Opening Tutorial | First ten plies | 2 plies | 60 / 45 | classic, coordinates on, ECO and opening name, calm pacing |
-| `game-recap` | Game Recap | Critical moments | One scene per moment block | 60 / 60 | forge, focus on key squares, classification and reason, result outro |
+| ID                    | Name                | Default source    | Scene grouping             | Intro / outro | Visual and audio character                                              |
+| --------------------- | ------------------- | ----------------- | -------------------------- | ------------- | ----------------------------------------------------------------------- |
+| `cinematic-chess`     | Cinematic Chess     | Full game         | 4 plies                    | 75 / 75       | forge, glow off, zoom 1.15, title and caption, move SFX 0.35            |
+| `tactical-breakdown`  | Tactical Breakdown  | Critical moments  | One scene per moment block | 45 / 45       | forge, capture/check focus, arrows, explanation from R3 reason, SFX 0.5 |
+| `brilliant-move`      | Brilliant Move      | Brilliant moments | One scene per moment block | 60 / 60       | forge, glow on, zoom 1.4, brand annotation, caption                     |
+| `checkmate-sequence`  | Checkmate Sequence  | Final six plies   | 2 plies                    | 45 / 60       | forge, checkmate emphasis, glow on, result outro, checkmate SFX         |
+| `minimalist-analysis` | Minimalist Analysis | Full game         | 4 plies                    | 45 / 45       | forge, coordinates off, zoom 1.0, small body captions, SFX 0.25         |
+| `opening-tutorial`    | Opening Tutorial    | First ten plies   | 2 plies                    | 60 / 45       | classic, coordinates on, ECO and opening name, calm pacing              |
+| `game-recap`          | Game Recap          | Critical moments  | One scene per moment block | 60 / 60       | forge, focus on key squares, classification and reason, result outro    |
 
 ### 6.1 Template default source modes
 
@@ -650,21 +650,21 @@ Rules:
 
 ## 16. Error handling
 
-| Case | Required behaviour |
-|---|---|
-| Source game missing | Use stored game snapshot; show archived notice |
-| Scene references invalid ply | Show board error and skip animation |
-| Zero or negative duration | Reject with validation message |
-| Audio asset unavailable | Warning, skip audio, continue preview |
-| Text exceeds safe area | Warning listing overlay ID |
-| Aspect ratio no longer fits | Warning, render continues |
-| Preview frame fails | Visible error state, project untouched |
-| Storage unavailable | Recoverable error state |
-| Quota exceeded | Visible error and retry |
-| Migration fails | Recoverable error state |
-| Invalid template | Skip template, show warning |
-| Audio upload invalid | Visible error, no asset stored |
-| Empty project | Empty preview state |
+| Case                         | Required behaviour                             |
+| ---------------------------- | ---------------------------------------------- |
+| Source game missing          | Use stored game snapshot; show archived notice |
+| Scene references invalid ply | Show board error and skip animation            |
+| Zero or negative duration    | Reject with validation message                 |
+| Audio asset unavailable      | Warning, skip audio, continue preview          |
+| Text exceeds safe area       | Warning listing overlay ID                     |
+| Aspect ratio no longer fits  | Warning, render continues                      |
+| Preview frame fails          | Visible error state, project untouched         |
+| Storage unavailable          | Recoverable error state                        |
+| Quota exceeded               | Visible error and retry                        |
+| Migration fails              | Recoverable error state                        |
+| Invalid template             | Skip template, show warning                    |
+| Audio upload invalid         | Visible error, no asset stored                 |
+| Empty project                | Empty preview state                            |
 
 ---
 
@@ -820,16 +820,16 @@ Maps to R5-T16.
 
 ## 19. Risks
 
-| Risk | Mitigation |
-|---|---|
-| Full game creates too many scenes | Three-ply grouping and duration minimums |
-| Template regeneration loses edits | Confirmation dialog and undo |
-| Autosave races | Revision-based debounce and flush on unmount |
-| Audio upload exceeds quota | Size, duration, and project total checks |
-| Aspect ratio breaks text | Safe-area warnings and no auto-resize |
-| Custom template becomes stale | Versioned snapshots and reset fallback |
-| Track UI becomes crowded | Scene strip plus concise track rows |
-| R4 projects lose template data | `template` remains optional and null |
+| Risk                              | Mitigation                                   |
+| --------------------------------- | -------------------------------------------- |
+| Full game creates too many scenes | Three-ply grouping and duration minimums     |
+| Template regeneration loses edits | Confirmation dialog and undo                 |
+| Autosave races                    | Revision-based debounce and flush on unmount |
+| Audio upload exceeds quota        | Size, duration, and project total checks     |
+| Aspect ratio breaks text          | Safe-area warnings and no auto-resize        |
+| Custom template becomes stale     | Versioned snapshots and reset fallback       |
+| Track UI becomes crowded          | Scene strip plus concise track rows          |
+| R4 projects lose template data    | `template` remains optional and null         |
 
 ---
 
