@@ -51,6 +51,16 @@ export function NavIcon({ name, className }: NavIconProps) {
     );
   }
 
+  if (name === "library") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <path d="M4 4.5h5.5A2.5 2.5 0 0 1 12 7v9.5H6.5A2.5 2.5 0 0 1 4 14V4.5Z" />
+        <path d="M16 4.5h-2.5A1.5 1.5 0 0 0 12 6v10.5h2.5A1.5 1.5 0 0 0 16 15V4.5Z" />
+        <path d="M7 8h2M7 11h2" opacity=".65" />
+      </svg>
+    );
+  }
+
   if (name === "templates") {
     return (
       <svg {...common} aria-hidden="true">

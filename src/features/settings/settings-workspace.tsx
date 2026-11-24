@@ -92,6 +92,7 @@ export function SettingsWorkspace() {
   const [saveState, setSaveState] = useState<SaveState>("loading");
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("general");
+  const [playerNameInput, setPlayerNameInput] = useState("");
   const { requestPersistence } = useStorageStatus();
   const capabilities = useBrowserCapabilities();
   const engineUsesTime = settings.enginePreferences.movetimeMs !== undefined;
@@ -324,6 +325,75 @@ export function SettingsWorkspace() {
               />
               Reduce interface motion
             </label>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/80 bg-surface-1">
+          <CardHeader>
+            <CardTitle className="text-[15px]">Player names</CardTitle>
+            <CardDescription>
+              Chess Library uses these names to identify your side in imported
+              games. Matching is case-insensitive. Ambiguous games stay unknown.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-1.5">
+              {settings.playerNames.length ? (
+                settings.playerNames.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() =>
+                      update({
+                        playerNames: settings.playerNames.filter(
+                          (item) => item !== name,
+                        ),
+                      })
+                    }
+                    className="rounded-full border border-border/80 bg-surface-2 px-2.5 py-1 text-[11px] text-foreground hover:border-destructive/50 hover:text-destructive"
+                    aria-label={`Remove player name ${name}`}
+                  >
+                    {name} ×
+                  </button>
+                ))
+              ) : (
+                <p className="text-[11px] text-muted-foreground">
+                  No player names yet.
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={playerNameInput}
+                onChange={(event) => setPlayerNameInput(event.target.value)}
+                placeholder="Your Chess.com or Lichess name"
+                aria-label="Add player name"
+                className="h-10"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 border-border/80 bg-transparent px-3"
+                onClick={() => {
+                  const name = playerNameInput.trim();
+                  if (!name) return;
+                  if (
+                    settings.playerNames.some(
+                      (item) => item.toLowerCase() === name.toLowerCase(),
+                    )
+                  ) {
+                    setPlayerNameInput("");
+                    return;
+                  }
+                  update({
+                    playerNames: [...settings.playerNames, name].slice(0, 20),
+                  });
+                  setPlayerNameInput("");
+                }}
+              >
+                Add
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

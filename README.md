@@ -43,6 +43,15 @@ Open http://localhost:3000.
 
 The project stores a game snapshot, so it remains renderable after the source game is removed.
 
+## Chess Library
+
+- `/library` is a local study workspace with Openings, Repertoire, Practice, My Games, and Reference.
+- Opening Explorer uses the bundled CC0 `chess-openings` move tree.
+- 5,000 CC0 Lichess puzzles power the tactics trainer.
+- Reference contains 30 original strategy, tactics, middlegame, and endgame articles.
+- Player names in Settings enable side-aware game insights and mistake drills.
+- Library data is stored in IndexedDB v2 and works offline.
+
 ## R0 technical labs
 
 These pages are proof-of-concepts, not the daily workflow:

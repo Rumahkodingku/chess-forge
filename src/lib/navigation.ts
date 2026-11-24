@@ -2,6 +2,7 @@ export type NavIconName =
   | "dashboard"
   | "analysis"
   | "studio"
+  | "library"
   | "templates"
   | "settings";
 
@@ -44,6 +45,12 @@ export const navigation: NavGroup[] = [
   {
     label: "Library",
     items: [
+      {
+        href: "/library",
+        label: "Chess Library",
+        description: "Study openings, repertoire, and tactics",
+        icon: "library",
+      },
       {
         href: "/templates",
         label: "Templates",

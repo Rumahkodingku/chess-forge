@@ -8,6 +8,7 @@ export default defineConfig({
     "r4-production.spec.ts",
     "r5-production.spec.ts",
     "r6-production.spec.ts",
+    "r8-production.spec.ts",
   ],
   fullyParallel: true,
   workers: 2,

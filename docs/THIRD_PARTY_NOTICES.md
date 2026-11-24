@@ -44,6 +44,8 @@ ChessForge is a local-first, single-user application. This file records the thir
 | --------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------ |
 | cburnett chess pieces                               | CC BY-SA 3.0              | Colin M.L. Burnett. Source files retrieved from the Lichess cburnett piece set.      |
 | chess-openings dataset                              | CC0 1.0                   | Lichess opening names dataset. https://github.com/lichess-org/chess-openings         |
+| Lichess puzzle database                             | CC0 1.0                   | Selected 5,000-puzzle subset. https://database.lichess.org/                          |
+| ChessForge reference articles                       | Original content          | Written for ChessForge. No third-party article text is copied.                       |
 | Built-in move, capture, check, and checkmate sounds | CC0 1.0                   | Generated for ChessForge with FFmpeg sine synthesis. Dedicated to the public domain. |
 | Geist and Geist Mono fonts                          | SIL Open Font License 1.1 | Vercel. Served through `next/font`.                                                  |
 

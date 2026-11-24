@@ -10,8 +10,20 @@ import {
 } from "@/features/analysis/types";
 import { type Game, gameSchema } from "@/features/games/types";
 import {
+  type LearningItemType,
+  type LearningProgress,
+  type LibraryNote,
+  type LibraryNoteTargetType,
+  learningProgressSchema,
+  libraryNoteSchema,
+  progressId,
+  type RepertoireLine,
+  repertoireLineSchema,
+} from "@/features/library/schemas";
+import {
   type ApplicationSettings,
   applicationSettingsSchema,
+  normalizeApplicationSettings,
 } from "@/features/settings/types";
 import { normalizeProject } from "@/features/studio/scene/project-normalization";
 import {
@@ -29,7 +41,7 @@ import {
 } from "@/lib/errors";
 
 export const DB_NAME = "chessforge";
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 export interface AssetRecord {
   id: string;
@@ -143,6 +155,36 @@ interface ChessForgeDB extends DBSchema {
     key: string;
     value: KeyValueRecord;
   };
+  libraryNotes: {
+    key: string;
+    value: LibraryNote;
+    indexes: {
+      targetType: string;
+      targetId: string;
+      target: [string, string];
+      updatedAt: string;
+    };
+  };
+  repertoireLines: {
+    key: string;
+    value: RepertoireLine;
+    indexes: {
+      side: string;
+      eco: string;
+      priority: string;
+      updatedAt: string;
+    };
+  };
+  learningProgress: {
+    key: string;
+    value: LearningProgress;
+    indexes: {
+      itemType: string;
+      nextReviewAt: string;
+      due: [string, string];
+      updatedAt: string;
+    };
+  };
 }
 
 export type ChessForgeDatabase = IDBPDatabase<ChessForgeDB>;
@@ -174,49 +216,79 @@ export async function openChessForgeDatabase(): Promise<ChessForgeDatabase> {
 
   dbPromise ??= (async () => {
     const db = await openDB<ChessForgeDB>(DB_NAME, DB_VERSION, {
-      upgrade(database) {
+      upgrade(database, oldVersion) {
         try {
-          const games = database.createObjectStore("games", { keyPath: "id" });
-          games.createIndex("createdAt", "createdAt");
-          games.createIndex("updatedAt", "updatedAt");
-          games.createIndex("source", "source");
-          games.createIndex("white", "metadata.white");
-          games.createIndex("black", "metadata.black");
+          if (oldVersion < 1) {
+            const games = database.createObjectStore("games", {
+              keyPath: "id",
+            });
+            games.createIndex("createdAt", "createdAt");
+            games.createIndex("updatedAt", "updatedAt");
+            games.createIndex("source", "source");
+            games.createIndex("white", "metadata.white");
+            games.createIndex("black", "metadata.black");
 
-          const analyses = database.createObjectStore("positionAnalyses", {
-            keyPath: "cacheKey",
-          });
-          analyses.createIndex("gameId", "gameId");
-          analyses.createIndex("ply", "ply");
-          analyses.createIndex("fen", "fen");
-          analyses.createIndex("createdAt", "createdAt");
+            const analyses = database.createObjectStore("positionAnalyses", {
+              keyPath: "cacheKey",
+            });
+            analyses.createIndex("gameId", "gameId");
+            analyses.createIndex("ply", "ply");
+            analyses.createIndex("fen", "fen");
+            analyses.createIndex("createdAt", "createdAt");
 
-          const assessments = database.createObjectStore("moveAssessments", {
-            keyPath: "id",
-          });
-          assessments.createIndex("gameId", "gameId");
-          assessments.createIndex("ply", "ply");
+            const assessments = database.createObjectStore("moveAssessments", {
+              keyPath: "id",
+            });
+            assessments.createIndex("gameId", "gameId");
+            assessments.createIndex("ply", "ply");
 
-          const projects = database.createObjectStore("projects", {
-            keyPath: "id",
-          });
-          projects.createIndex("createdAt", "createdAt");
-          projects.createIndex("updatedAt", "updatedAt");
+            const projects = database.createObjectStore("projects", {
+              keyPath: "id",
+            });
+            projects.createIndex("createdAt", "createdAt");
+            projects.createIndex("updatedAt", "updatedAt");
 
-          const templates = database.createObjectStore("templates", {
-            keyPath: "id",
-          });
-          templates.createIndex("updatedAt", "updatedAt");
+            const templates = database.createObjectStore("templates", {
+              keyPath: "id",
+            });
+            templates.createIndex("updatedAt", "updatedAt");
 
-          const assets = database.createObjectStore("assets", {
-            keyPath: "id",
-          });
-          assets.createIndex("hash", "hash");
-          assets.createIndex("mimeType", "mimeType");
-          assets.createIndex("createdAt", "createdAt");
+            const assets = database.createObjectStore("assets", {
+              keyPath: "id",
+            });
+            assets.createIndex("hash", "hash");
+            assets.createIndex("mimeType", "mimeType");
+            assets.createIndex("createdAt", "createdAt");
 
-          database.createObjectStore("settings", { keyPath: "key" });
-          database.createObjectStore("meta", { keyPath: "key" });
+            database.createObjectStore("settings", { keyPath: "key" });
+            database.createObjectStore("meta", { keyPath: "key" });
+          }
+
+          if (oldVersion < 2) {
+            const notes = database.createObjectStore("libraryNotes", {
+              keyPath: "id",
+            });
+            notes.createIndex("targetType", "targetType");
+            notes.createIndex("targetId", "targetId");
+            notes.createIndex("target", ["targetType", "targetId"]);
+            notes.createIndex("updatedAt", "updatedAt");
+
+            const repertoire = database.createObjectStore("repertoireLines", {
+              keyPath: "id",
+            });
+            repertoire.createIndex("side", "side");
+            repertoire.createIndex("eco", "eco");
+            repertoire.createIndex("priority", "priority");
+            repertoire.createIndex("updatedAt", "updatedAt");
+
+            const progress = database.createObjectStore("learningProgress", {
+              keyPath: "id",
+            });
+            progress.createIndex("itemType", "itemType");
+            progress.createIndex("nextReviewAt", "nextReviewAt");
+            progress.createIndex("due", ["itemType", "nextReviewAt"]);
+            progress.createIndex("updatedAt", "updatedAt");
+          }
         } catch (error) {
           throw new StorageMigrationError(
             error instanceof Error ? error.message : undefined,
@@ -319,6 +391,39 @@ export interface PositionAnalysisRepository {
 export interface MoveAssessmentRepository {
   listByGame(gameId: string): Promise<MoveAssessment[]>;
   replaceForGame(gameId: string, assessments: MoveAssessment[]): Promise<void>;
+}
+
+export interface LibraryNoteRepository {
+  getById(id: string): Promise<LibraryNote | undefined>;
+  listByTarget(
+    targetType: LibraryNoteTargetType,
+    targetId: string,
+  ): Promise<LibraryNote[]>;
+  listAll(): Promise<LibraryNote[]>;
+  save(note: LibraryNote): Promise<void>;
+  delete(id: string): Promise<void>;
+}
+
+export interface RepertoireRepository {
+  getById(id: string): Promise<RepertoireLine | undefined>;
+  list(): Promise<RepertoireLine[]>;
+  listBySide(side: "white" | "black"): Promise<RepertoireLine[]>;
+  save(line: RepertoireLine): Promise<void>;
+  delete(id: string): Promise<void>;
+}
+
+export interface LearningProgressRepository {
+  get(
+    itemType: LearningItemType,
+    itemId: string,
+  ): Promise<LearningProgress | undefined>;
+  listDue(
+    itemType?: LearningItemType,
+    now?: string,
+  ): Promise<LearningProgress[]>;
+  listAll(): Promise<LearningProgress[]>;
+  save(progress: LearningProgress): Promise<void>;
+  delete(itemType: LearningItemType, itemId: string): Promise<void>;
 }
 
 export function createGameRepository(db: ChessForgeDatabase): GameRepository {
@@ -444,7 +549,15 @@ export function createSettingsRepository(
   return {
     get: async () => {
       const record = await db.get("settings", "app");
-      return parseStored(record?.value, applicationSettingsSchema, "settings");
+      if (record === undefined) return undefined;
+      try {
+        return normalizeApplicationSettings(record.value);
+      } catch {
+        throw new ValidationError(
+          "Stored settings data is invalid.",
+          "Open Settings and save a fresh configuration.",
+        );
+      }
     },
     save: async (settings) => {
       await db.put("settings", {
@@ -499,6 +612,119 @@ export function createMoveAssessmentRepository(
       }
       await transaction.done;
     },
+  };
+}
+
+export function createLibraryNoteRepository(
+  db: ChessForgeDatabase,
+): LibraryNoteRepository {
+  return {
+    getById: async (id) =>
+      parseStored(await db.get("libraryNotes", id), libraryNoteSchema, "note"),
+    listByTarget: async (targetType, targetId) => {
+      const notes = await db.getAllFromIndex("libraryNotes", "target", [
+        targetType,
+        targetId,
+      ]);
+      return parseStoredList(notes, libraryNoteSchema, "note").sort(
+        (left, right) =>
+          Number(right.pinned) - Number(left.pinned) ||
+          right.updatedAt.localeCompare(left.updatedAt),
+      );
+    },
+    listAll: async () => {
+      const notes = await db.getAll("libraryNotes");
+      return parseStoredList(notes, libraryNoteSchema, "note").sort(
+        (left, right) =>
+          Number(right.pinned) - Number(left.pinned) ||
+          right.updatedAt.localeCompare(left.updatedAt),
+      );
+    },
+    save: async (note) => {
+      await db.put("libraryNotes", libraryNoteSchema.parse(note));
+    },
+    delete: (id) => db.delete("libraryNotes", id),
+  };
+}
+
+export function createRepertoireRepository(
+  db: ChessForgeDatabase,
+): RepertoireRepository {
+  return {
+    getById: async (id) =>
+      parseStored(
+        await db.get("repertoireLines", id),
+        repertoireLineSchema,
+        "repertoire line",
+      ),
+    list: async () => {
+      const lines = await db.getAll("repertoireLines");
+      return parseStoredList(
+        lines,
+        repertoireLineSchema,
+        "repertoire line",
+      ).sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    },
+    listBySide: async (side) => {
+      const lines = await db.getAllFromIndex("repertoireLines", "side", side);
+      return parseStoredList(
+        lines,
+        repertoireLineSchema,
+        "repertoire line",
+      ).sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    },
+    save: async (line) => {
+      await db.put("repertoireLines", repertoireLineSchema.parse(line));
+    },
+    delete: (id) => db.delete("repertoireLines", id),
+  };
+}
+
+export function createLearningProgressRepository(
+  db: ChessForgeDatabase,
+): LearningProgressRepository {
+  return {
+    get: async (itemType, itemId) =>
+      parseStored(
+        await db.get("learningProgress", progressId(itemType, itemId)),
+        learningProgressSchema,
+        "learning progress",
+      ),
+    listDue: async (itemType, now = new Date().toISOString()) => {
+      const records = itemType
+        ? await db.getAllFromIndex(
+            "learningProgress",
+            "due",
+            IDBKeyRange.bound([itemType, ""], [itemType, now]),
+          )
+        : await db.getAllFromIndex(
+            "learningProgress",
+            "nextReviewAt",
+            IDBKeyRange.upperBound(now),
+          );
+      return parseStoredList(
+        records,
+        learningProgressSchema,
+        "learning progress",
+      ).sort((left, right) =>
+        left.nextReviewAt.localeCompare(right.nextReviewAt),
+      );
+    },
+    listAll: async () => {
+      const records = await db.getAll("learningProgress");
+      return parseStoredList(
+        records,
+        learningProgressSchema,
+        "learning progress",
+      ).sort((left, right) =>
+        left.nextReviewAt.localeCompare(right.nextReviewAt),
+      );
+    },
+    save: async (progress) => {
+      await db.put("learningProgress", learningProgressSchema.parse(progress));
+    },
+    delete: (itemType, itemId) =>
+      db.delete("learningProgress", progressId(itemType, itemId)),
   };
 }
 

@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpDown,
+  BookOpen,
   ChevronFirst,
   ChevronLast,
   ChevronLeft,
@@ -725,19 +726,34 @@ export default function AnalysisGamePage() {
                       : " · Unknown opening"}
                   </CardDescription>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setOrientation((current) => (current === "w" ? "b" : "w"))
-                  }
-                  aria-label="Flip board"
-                  className="h-9 border-border/80 bg-transparent px-3"
-                >
-                  <ArrowUpDown aria-hidden className="size-3.5" />
-                  Flip
-                </Button>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="h-9 border-border/80 bg-transparent px-3"
+                  >
+                    <Link
+                      href={`/library/openings?fen=${encodeURIComponent(displayedFen)}`}
+                    >
+                      <BookOpen aria-hidden className="size-3.5" />
+                      Library
+                    </Link>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setOrientation((current) => (current === "w" ? "b" : "w"))
+                    }
+                    aria-label="Flip board"
+                    className="h-9 border-border/80 bg-transparent px-3"
+                  >
+                    <ArrowUpDown aria-hidden className="size-3.5" />
+                    Flip
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>

@@ -23,7 +23,8 @@ export const applicationSettingsSchema = z
         reducedMotion: z.boolean(),
       })
       .strict(),
-    schemaVersion: z.number().int().positive(),
+    playerNames: z.array(z.string().trim().min(1).max(80)).max(20),
+    schemaVersion: z.literal(2),
   })
   .strict();
 
@@ -45,8 +46,27 @@ export const DEFAULT_SETTINGS: ApplicationSettings = {
   motionPreferences: {
     reducedMotion: false,
   },
-  schemaVersion: 1,
+  playerNames: [],
+  schemaVersion: 2,
 };
+
+export function normalizeApplicationSettings(
+  value: unknown,
+): ApplicationSettings {
+  if (
+    value &&
+    typeof value === "object" &&
+    "schemaVersion" in value &&
+    (value as { schemaVersion?: unknown }).schemaVersion === 1
+  ) {
+    return applicationSettingsSchema.parse({
+      ...value,
+      playerNames: [],
+      schemaVersion: 2,
+    });
+  }
+  return applicationSettingsSchema.parse(value);
+}
 
 export const ASPECT_PRESETS = {
   "9:16": { width: 1080, height: 1920 },

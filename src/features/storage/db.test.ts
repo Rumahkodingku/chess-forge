@@ -1,3 +1,4 @@
+import { openDB } from "idb";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type {
   MoveAssessment,
@@ -10,11 +11,15 @@ import {
   closeChessForgeDatabase,
   createAssetRepository,
   createGameRepository,
+  createLearningProgressRepository,
+  createLibraryNoteRepository,
   createMoveAssessmentRepository,
   createPositionAnalysisRepository,
   createProjectRepository,
+  createRepertoireRepository,
   createSettingsRepository,
   createTemplateRepository,
+  DB_NAME,
   deleteChessForgeDatabase,
   openChessForgeDatabase,
 } from "@/features/storage/db";
@@ -254,6 +259,109 @@ describe("IndexedDB repositories", () => {
       id: asset.id,
       hash: "test-hash",
     });
+  });
+
+  it("creates the library stores at database version 2", async () => {
+    const db = await openChessForgeDatabase();
+    expect(db.version).toBe(2);
+    expect(await db.getAll("libraryNotes")).toEqual([]);
+    expect(await db.getAll("repertoireLines")).toEqual([]);
+    expect(await db.getAll("learningProgress")).toEqual([]);
+  });
+
+  it("migrates a v1 database without losing a game or settings", async () => {
+    const game = parseSinglePgn(PGN);
+    const { playerNames: _ignored, ...legacySettings } = {
+      ...DEFAULT_SETTINGS,
+      schemaVersion: 1 as const,
+    };
+    const legacy = await openDB(DB_NAME, 1, {
+      upgrade(database) {
+        database.createObjectStore("games", { keyPath: "id" });
+        database.createObjectStore("settings", { keyPath: "key" });
+        database.createObjectStore("meta", { keyPath: "key" });
+      },
+    });
+    await legacy.put("games", game);
+    await legacy.put("settings", { key: "app", value: legacySettings });
+    legacy.close();
+
+    const db = await openChessForgeDatabase();
+    expect(db.version).toBe(2);
+    expect(await createGameRepository(db).getById(game.id)).toMatchObject({
+      id: game.id,
+    });
+    const settings = await createSettingsRepository(db).get();
+    expect(settings?.schemaVersion).toBe(2);
+    expect(settings?.playerNames).toEqual([]);
+    expect(await db.getAll("libraryNotes")).toEqual([]);
+  });
+
+  it("round trips a library note by target", async () => {
+    const db = await openChessForgeDatabase();
+    const repository = createLibraryNoteRepository(db);
+    const note = {
+      id: crypto.randomUUID(),
+      targetType: "opening" as const,
+      targetId: "test-epd",
+      targetLabel: "Test opening",
+      body: "A note",
+      tags: [],
+      pinned: false,
+      createdAt: "2026-11-24T00:00:00.000Z",
+      updatedAt: "2026-11-24T00:00:00.000Z",
+      schemaVersion: 1 as const,
+    };
+    await repository.save(note);
+    expect(await repository.listByTarget("opening", "test-epd")).toEqual([
+      note,
+    ]);
+    await repository.delete(note.id);
+    expect(await repository.getById(note.id)).toBeUndefined();
+  });
+
+  it("round trips a repertoire line", async () => {
+    const db = await openChessForgeDatabase();
+    const repository = createRepertoireRepository(db);
+    const line = {
+      id: crypto.randomUUID(),
+      name: "Test line",
+      side: "white" as const,
+      startFen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      moves: [{ san: "e4", uci: "e2e4" }],
+      notes: "",
+      priority: "core" as const,
+      tags: [],
+      createdAt: "2026-11-24T00:00:00.000Z",
+      updatedAt: "2026-11-24T00:00:00.000Z",
+      schemaVersion: 1 as const,
+    };
+    await repository.save(line);
+    expect(await repository.getById(line.id)).toEqual(line);
+    expect(await repository.listBySide("white")).toEqual([line]);
+  });
+
+  it("round trips learning progress", async () => {
+    const db = await openChessForgeDatabase();
+    const repository = createLearningProgressRepository(db);
+    const progress = {
+      id: "puzzle:00sHx",
+      itemType: "puzzle" as const,
+      itemId: "00sHx",
+      attempts: 1,
+      correct: 1,
+      streak: 1,
+      intervalDays: 1,
+      nextReviewAt: "2026-11-25T00:00:00.000Z",
+      createdAt: "2026-11-24T00:00:00.000Z",
+      updatedAt: "2026-11-24T00:00:00.000Z",
+      schemaVersion: 1 as const,
+    };
+    await repository.save(progress);
+    expect(await repository.get("puzzle", "00sHx")).toEqual(progress);
+    expect(
+      await repository.listDue("puzzle", "2026-11-26T00:00:00.000Z"),
+    ).toEqual([progress]);
   });
 
   it("rejects schema drift when reading a stored game", async () => {

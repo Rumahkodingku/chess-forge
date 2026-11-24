@@ -6,6 +6,7 @@ export interface OpeningEntry {
   name: string;
   epd: string;
   ply: number;
+  moves: string[];
 }
 
 export type OpeningIndex = Map<string, OpeningEntry[]>;

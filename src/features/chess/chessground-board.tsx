@@ -17,6 +17,7 @@ interface ChessgroundBoardProps {
   theme?: AnalysisBoardTheme;
   label?: string;
   className?: string;
+  onMove?: (from: string, to: string) => void;
 }
 
 export function ChessgroundBoard({
@@ -26,6 +27,7 @@ export function ChessgroundBoard({
   theme = "forge",
   label = "Chess position",
   className,
+  onMove,
 }: ChessgroundBoardProps) {
   const elementRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<Api | null>(null);
@@ -33,9 +35,18 @@ export function ChessgroundBoard({
 
   const position = useMemo(() => {
     try {
-      return { valid: true, check: new Chess(fen).inCheck() };
+      const chess = new Chess(fen);
+      const dests = new Map<Key, Key[]>();
+      for (const move of chess.moves({ verbose: true })) {
+        const from = move.from as Key;
+        const to = move.to as Key;
+        const existing = dests.get(from) ?? [];
+        if (!existing.includes(to)) existing.push(to);
+        dests.set(from, existing);
+      }
+      return { valid: true, check: chess.inCheck(), dests };
     } catch {
-      return { valid: false, check: false };
+      return { valid: false, check: false, dests: new Map<Key, Key[]>() };
     }
   }, [fen]);
 
@@ -52,6 +63,19 @@ export function ChessgroundBoard({
       coordinates: true,
       coordinatesOnSquares: true,
       viewOnly: false,
+      ...(onMove
+        ? {
+            movable: {
+              free: false,
+              color: fen.split(" ")[1] === "b" ? "black" : "white",
+              dests: position.dests,
+              showDests: true,
+            },
+            events: {
+              move: (from: Key, to: Key) => onMove(from, to),
+            },
+          }
+        : {}),
       highlight: {
         lastMove: true,
         check: true,
@@ -79,7 +103,7 @@ export function ChessgroundBoard({
       apiRef.current.set(config);
       apiRef.current.setShapes([]);
     }
-  }, [failed, fen, lastMove, orientation, position]);
+  }, [failed, fen, lastMove, onMove, orientation, position]);
 
   useEffect(() => {
     return () => {

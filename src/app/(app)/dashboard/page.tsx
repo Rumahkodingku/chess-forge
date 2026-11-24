@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { StoragePanel } from "@/components/shared/storage-panel";
 import { Button } from "@/components/ui/button";
+import { LibraryDashboardCard } from "@/features/dashboard/library-dashboard-card";
 import { RecentWork } from "@/features/dashboard/recent-work";
 import { BoardSvg } from "@/features/studio/rendering/board-svg";
 
@@ -93,6 +94,7 @@ export default function DashboardPage() {
 
         <div className="flex flex-col gap-5">
           <StoragePanel />
+          <LibraryDashboardCard />
           <div className="rounded-xl border border-border/80 bg-surface-1 p-4">
             <div className="flex items-center gap-2">
               <span className="flex size-8 items-center justify-center rounded-lg border border-border/80 bg-surface-2 text-brand">

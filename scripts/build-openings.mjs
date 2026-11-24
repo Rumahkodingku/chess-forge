@@ -69,7 +69,7 @@ for (const source of sources) {
     const key = `${eco}|${name}|${epd}|${moves.length}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    openings.push({ eco, name, epd, ply: moves.length });
+    openings.push({ eco, name, epd, ply: moves.length, moves });
   }
 }
 

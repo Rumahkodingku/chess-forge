@@ -1,3 +1,4 @@
+import { Chess } from "chess.js";
 import { describe, expect, it } from "vitest";
 import type { OpeningEntry } from "@/features/analysis/openings/lookup";
 import {
@@ -21,24 +22,28 @@ const entries: OpeningEntry[] = [
     name: "Start",
     epd: epdFromFen(START_FEN),
     ply: 0,
+    moves: [],
   },
   {
     eco: "B00",
     name: "King's Pawn",
     epd: epdFromFen(E4_FEN),
     ply: 1,
+    moves: ["e4"],
   },
   {
     eco: "C20",
     name: "King's Pawn Game",
     epd: epdFromFen(E4_E5_FEN),
     ply: 2,
+    moves: ["e4", "e5"],
   },
   {
     eco: "C20",
     name: "Open Game",
     epd: epdFromFen(E4_E5_FEN),
     ply: 2,
+    moves: ["e4", "e5"],
   },
 ];
 
@@ -61,6 +66,7 @@ describe("opening lookup", () => {
       name: "King's Pawn Game",
       epd: epdFromFen(E4_E5_FEN),
       ply: 2,
+      moves: ["e4", "e5"],
     });
   });
 
@@ -76,7 +82,13 @@ describe("opening lookup", () => {
     ).toBeNull();
     const enriched = buildOpeningIndex([
       ...entries,
-      { eco: "D02", name: "Transposed", epd: epdFromFen(transposed), ply: 4 },
+      {
+        eco: "D02",
+        name: "Transposed",
+        epd: epdFromFen(transposed),
+        ply: 3,
+        moves: ["d4", "d5", "Nf3"],
+      },
     ]);
     expect(
       openingAtFen(
@@ -104,5 +116,17 @@ describe("opening lookup", () => {
     const loaded = await loadOpeningEntries();
     expect(loaded.length).toBeGreaterThan(3000);
     expect(loaded.some((entry) => entry.eco === "C60")).toBe(true);
+  });
+
+  it("loads legal move sequences for every opening", async () => {
+    const loaded = await loadOpeningEntries();
+    for (const entry of loaded) {
+      expect(entry.moves.length).toBe(entry.ply);
+      const chess = new Chess();
+      for (const san of entry.moves) {
+        expect(() => chess.move(san)).not.toThrow();
+      }
+      expect(epdFromFen(chess.fen())).toBe(entry.epd);
+    }
   });
 });
