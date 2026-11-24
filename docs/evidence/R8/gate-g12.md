@@ -22,7 +22,7 @@
 - `/library` loads five areas: Openings, Repertoire, Practice, My Games, Reference.
 - Opening Explorer searches names/ECO, supports legal board moves (including promotion), named continuations, on-demand Stockfish, repertoire save, notes, and deep links from Analysis.
 - Repertoire supports line creation, edit, delete, board preview, persistence, and detail view.
-- Notes persist for opening, game, and article targets.
+- Notes persist for opening, game, article, puzzle, and repertoire targets.
 - My Games lists local games, resolves player side from Settings aliases, shows insights, and runs mistake drills against Stockfish.
 - Practice supports puzzles, repertoire review, and opening recall with Leitner progress.
 - Reference supports category/search/reading, diagrams, notes, and completion progress.
