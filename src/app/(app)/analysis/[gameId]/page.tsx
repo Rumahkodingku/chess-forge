@@ -604,7 +604,13 @@ export default function AnalysisGamePage() {
         return;
       }
       const now = new Date().toISOString();
-      const side = resolveUserSide(game, settings.playerNames) ?? "w";
+      const side = resolveUserSide(game, settings.playerNames);
+      if (!side) {
+        toast.error(
+          "Set your player name in Settings before saving this opening.",
+        );
+        return;
+      }
       await repository.save({
         id: crypto.randomUUID(),
         name: opening.name,
@@ -791,7 +797,7 @@ export default function AnalysisGamePage() {
                       Library
                     </Link>
                   </Button>
-                  {summary.opening ? (
+                  {summary.opening && summary.opening.ply > 0 ? (
                     <Button
                       type="button"
                       variant="outline"

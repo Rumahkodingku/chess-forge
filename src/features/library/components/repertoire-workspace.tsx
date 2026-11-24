@@ -212,6 +212,10 @@ export function RepertoireWorkspace() {
     try {
       const db = await openChessForgeDatabase();
       await createRepertoireRepository(db).delete(line.id);
+      await createLearningProgressRepository(db).delete(
+        "repertoire-line",
+        line.id,
+      );
       await reload();
       toast.success("Repertoire line deleted.");
     } catch (deleteError) {

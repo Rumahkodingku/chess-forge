@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-24
 **Gate:** G12
-**Status:** Passed with documented content-depth limitation
+**Status:** Code gates passed; human content spot-check pending
 
 ## Automated checks
 
@@ -15,7 +15,7 @@
 | Production E2E | `npm run test:e2e:prod` | 7 tests passed |
 | Opening data validation | `src/features/analysis/openings/lookup.test.ts` | 3,865 entries with legal move sequences |
 | Puzzle data validation | `src/features/library/puzzles/load.test.ts` | 5,000 unique puzzles, 600–2400 |
-| Reference validation | `src/features/library/reference/index.test.ts` | 30 articles, unique slugs, legal diagram FENs, 700–1,200 words each |
+| Reference validation | `src/features/library/reference/index.test.ts` | 30 articles, unique slugs, legal diagram FENs, 700–1,000 words each |
 | Database migration | `src/features/storage/db.test.ts` | v1 game/settings survive v2 upgrade |
 
 ## Feature evidence
@@ -37,7 +37,7 @@
 1. Counters & Defenses uses named continuations from the bundled opening dataset plus on-demand engine analysis. It does not claim popularity or win-rate data.
 2. The mistake trainer is cache-first, but it still runs Stockfish on demand when no cached position exists.
 3. Backup/restore does not include the three new Library stores yet; R7 owns backup implementation and the roadmap now records that requirement.
-4. Reference articles meet the word range and structure checks, but a human spot-check of tone and chess accuracy is still recommended.
+4. Reference articles meet the 700–1,000-word range and structure checks, but the spec requires a human content sign-off. That sign-off is still pending.
 
 ## Bundle size
 
@@ -49,7 +49,7 @@
 
 ## Manual review required
 
-- Read at least one article per category and confirm tone and accuracy.
+- Read at least one article per category and confirm tone and accuracy. Record the sign-off in this file before treating G12 as fully closed.
 - Check the player-name alias flow with a real imported game.
 - Confirm that the 5,000-puzzle bundle feels acceptable on the reference device.
 - Verify R7 backup/restore includes `libraryNotes`, `repertoireLines`, and `learningProgress`.

@@ -35,6 +35,28 @@ const EMPTY: Results = {
   articles: [],
 };
 
+function noteHref(note: LibraryNote): string {
+  if (note.targetType === "article") {
+    return `/library/reference/${note.targetId}`;
+  }
+  if (note.targetType === "repertoire") {
+    return `/library/repertoire/${note.targetId}`;
+  }
+  if (note.targetType === "opening" || note.targetType === "position") {
+    return `/library/openings?fen=${encodeURIComponent(note.targetId)}`;
+  }
+  if (note.targetType === "game") {
+    return `/library/games/${note.targetId}/insights`;
+  }
+  if (note.targetType === "move") {
+    return `/analysis/${note.targetId.split(":")[0]}`;
+  }
+  if (note.targetType === "puzzle") {
+    return "/library/practice";
+  }
+  return "/library";
+}
+
 export function LibrarySearch() {
   const [query, setQuery] = useState("");
   const deferred = useDeferredValue(query);
@@ -111,12 +133,7 @@ export function LibrarySearch() {
       .slice(0, 8)
       .map((note) => ({
         label: note.targetLabel,
-        href:
-          note.targetType === "article"
-            ? `/library/reference/${note.targetId}`
-            : note.targetType === "repertoire"
-              ? `/library/repertoire/${note.targetId}`
-              : "/library",
+        href: noteHref(note),
         detail: note.body.slice(0, 80),
       }));
     const matchingGames = games

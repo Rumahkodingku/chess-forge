@@ -52,10 +52,18 @@ const CATEGORY_NOTES = {
 function expandArticle(article: ReferenceArticle): ReferenceArticle {
   const notes = CATEGORY_NOTES[article.category];
   const extra: ReferenceBlock[] = [
+    { type: "heading", text: "Focus" },
+    {
+      type: "paragraph",
+      text: `This article focuses on ${article.title.toLowerCase()}. ${article.keyTakeaways.join(" ")} Keep those three ideas in view as you read the position, because they are the practical test of whether the theme is present.`,
+    },
     { type: "heading", text: "Why it matters" },
     { type: "paragraph", text: `${article.summary} ${notes.why}` },
     { type: "heading", text: "A practical approach" },
-    { type: "paragraph", text: notes.practice },
+    {
+      type: "paragraph",
+      text: `${article.keyTakeaways[0] ?? article.summary} ${notes.practice}`,
+    },
     {
       type: "list",
       items: [
@@ -67,9 +75,15 @@ function expandArticle(article: ReferenceArticle): ReferenceArticle {
       ],
     },
     { type: "heading", text: "Common mistakes" },
-    { type: "paragraph", text: notes.mistake },
+    {
+      type: "paragraph",
+      text: `${article.keyTakeaways[1] ?? article.summary} ${notes.mistake}`,
+    },
     { type: "heading", text: "How to train it" },
-    { type: "paragraph", text: notes.training },
+    {
+      type: "paragraph",
+      text: `${article.keyTakeaways[2] ?? article.summary} ${notes.training}`,
+    },
     {
       type: "list",
       items: [

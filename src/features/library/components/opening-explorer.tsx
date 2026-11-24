@@ -70,6 +70,8 @@ export function OpeningExplorer() {
         const { tree: loaded } = await loadLibraryOpenings();
         if (cancelled) return;
         const params = new URLSearchParams(window.location.search);
+        const search = params.get("search");
+        if (search) setQuery(search);
         const moves = params
           .get("line")
           ?.split(",")
@@ -341,87 +343,103 @@ export function OpeningExplorer() {
           ) : null}
         </div>
 
-        <div className="rounded-xl border border-border/80 bg-surface-1 p-3">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[12px] font-medium text-foreground">Move list</p>
-            <p className="font-mono text-[10px] text-muted-foreground">
-              {path.filter((node) => node.move).length} ply
+        {mode === "explore" ? (
+          <div className="rounded-xl border border-border/80 bg-surface-1 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[12px] font-medium text-foreground">
+                Move list
+              </p>
+              <p className="font-mono text-[10px] text-muted-foreground">
+                {path.filter((node) => node.move).length} ply
+              </p>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {path
+                .filter((node) => node.move)
+                .map((node) => (
+                  <button
+                    key={node.id}
+                    type="button"
+                    onClick={() => setCurrentId(node.id)}
+                    className="rounded border border-border/70 bg-surface-2 px-2 py-1 font-mono text-[11px] text-foreground hover:border-border-strong"
+                  >
+                    {node.move?.san}
+                  </button>
+                ))}
+              {path.length <= 1 ? (
+                <p className="px-1 py-1 text-[11px] text-muted-foreground">
+                  Play a move on the board or choose a continuation.
+                </p>
+              ) : null}
+            </div>
+            <div className="mt-3 flex gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 border-border/80 bg-transparent px-2"
+                disabled={path.length <= 1}
+                onClick={() => setCurrentId(path[0]?.id ?? current.id)}
+                aria-label="First move"
+              >
+                <ChevronFirst aria-hidden className="size-3.5" />
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 border-border/80 bg-transparent px-2"
+                disabled={path.length <= 1}
+                onClick={() =>
+                  setCurrentId(path[path.length - 2]?.id ?? current.id)
+                }
+                aria-label="Previous move"
+              >
+                <ChevronLeft aria-hidden className="size-3.5" />
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 border-border/80 bg-transparent px-2"
+                disabled={!continuations.length}
+                onClick={() => goTo(continuations[0]?.node)}
+                aria-label="Next named move"
+              >
+                <ChevronRight aria-hidden className="size-3.5" />
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 border-border/80 bg-transparent px-2"
+                disabled={!continuations.length}
+                onClick={() => {
+                  let node = current;
+                  while (node.childIds.length) {
+                    node = tree.nodes.get(node.childIds[0]) ?? node;
+                  }
+                  setCurrentId(node.id);
+                }}
+                aria-label="Last named move"
+              >
+                <ChevronLast aria-hidden className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border/80 bg-surface-1 p-4">
+            <p className="text-[12px] font-medium text-foreground">
+              Counters &amp; Defenses
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              Use the named continuations panel on the right to follow a
+              documented response. The engine panel below gives a concrete
+              alternative for the current position. Names are documentation, not
+              popularity data.
             </p>
           </div>
-          <div className="mt-2 flex flex-wrap gap-1">
-            {path
-              .filter((node) => node.move)
-              .map((node) => (
-                <button
-                  key={node.id}
-                  type="button"
-                  onClick={() => setCurrentId(node.id)}
-                  className="rounded border border-border/70 bg-surface-2 px-2 py-1 font-mono text-[11px] text-foreground hover:border-border-strong"
-                >
-                  {node.move?.san}
-                </button>
-              ))}
-            {path.length <= 1 ? (
-              <p className="px-1 py-1 text-[11px] text-muted-foreground">
-                Play a move on the board or choose a continuation.
-              </p>
-            ) : null}
-          </div>
-          <div className="mt-3 flex gap-1.5">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 border-border/80 bg-transparent px-2"
-              disabled={path.length <= 1}
-              onClick={() => setCurrentId(path[0]?.id ?? current.id)}
-              aria-label="First move"
-            >
-              <ChevronFirst aria-hidden className="size-3.5" />
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 border-border/80 bg-transparent px-2"
-              disabled={path.length <= 1}
-              onClick={() =>
-                setCurrentId(path[path.length - 2]?.id ?? current.id)
-              }
-              aria-label="Previous move"
-            >
-              <ChevronLeft aria-hidden className="size-3.5" />
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 border-border/80 bg-transparent px-2"
-              disabled={!continuations.length}
-              onClick={() => goTo(continuations[0]?.node)}
-              aria-label="Next named move"
-            >
-              <ChevronRight aria-hidden className="size-3.5" />
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 border-border/80 bg-transparent px-2"
-              disabled={!continuations.length}
-              onClick={() => {
-                let node = current;
-                while (node.childIds.length) {
-                  node = tree.nodes.get(node.childIds[0]) ?? node;
-                }
-                setCurrentId(node.id);
-              }}
-              aria-label="Last named move"
-            >
-              <ChevronLast aria-hidden className="size-3.5" />
-            </Button>
-          </div>
-        </div>
+        )}
       </div>
 
       <aside className="space-y-4">

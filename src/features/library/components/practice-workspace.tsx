@@ -1,5 +1,6 @@
 "use client";
 
+import { Chess } from "chess.js";
 import {
   Brain,
   CheckCircle2,
@@ -156,6 +157,7 @@ function PuzzlePanel() {
   const [wrongAttempts, setWrongAttempts] = useState(0);
   const [boardNonce, setBoardNonce] = useState(0);
   const [answerText, setAnswerText] = useState("");
+  const [lastAttempt, setLastAttempt] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -167,9 +169,14 @@ function PuzzlePanel() {
           await createLearningProgressRepository(db).listDue("puzzle");
         if (cancelled) return;
         const dueSet = new Set(due.map((item) => item.itemId));
+        const requestedTheme =
+          new URLSearchParams(window.location.search).get("theme") ?? "all";
         setAllPuzzles(loaded);
         setDueIds(dueSet);
-        setPuzzles(buildPuzzleSession(loaded, dueSet, "all", "all", 10));
+        setTheme(requestedTheme);
+        setPuzzles(
+          buildPuzzleSession(loaded, dueSet, "all", requestedTheme, 10),
+        );
         setState("ready");
       } catch (error) {
         if (!cancelled) {
@@ -208,6 +215,7 @@ function PuzzlePanel() {
       setSetup(applyPuzzleSetup(puzzle));
       setFeedback(null);
       setWrongAttempts(0);
+      setLastAttempt(null);
     } catch {
       setIndex((value) => value + 1);
     }
@@ -219,14 +227,20 @@ function PuzzlePanel() {
     if (!puzzle) return;
     if (feedback?.correct || wrongAttempts >= 2) return;
     const correct = isCorrectPuzzleMove(puzzle, uciOf(from, to, promotion));
+    setLastAttempt(uciOf(from, to, promotion));
+    const finalWrong = !correct && wrongAttempts >= 1;
     setFeedback({
       correct,
       message: correct
         ? `Correct. Solution: ${setup?.solution.join(" ") ?? ""}.`
-        : `Not this time. Try one more move. Expected: ${setup?.expectedUci ?? "unavailable"}.`,
+        : finalWrong
+          ? `Not this time. The expected move was ${setup?.expectedUci ?? "unavailable"}.`
+          : "Not this time. Try one more move.",
     });
     try {
-      await saveResult("puzzle", puzzle.id, correct);
+      if (correct || finalWrong) {
+        await saveResult("puzzle", puzzle.id, correct);
+      }
       if (correct) setSolved((value) => value + 1);
       else {
         setWrongAttempts((value) => value + 1);
@@ -246,10 +260,51 @@ function PuzzlePanel() {
     );
   }
 
-  if (state === "error" || !puzzle || !setup) {
+  if (state === "error") {
     return (
       <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-[12px] text-destructive">
         Puzzle data could not load.
+      </div>
+    );
+  }
+
+  if (!puzzle) {
+    return (
+      <div className="rounded-xl border border-border/80 bg-surface-1 p-6 text-center">
+        <p className="text-[14px] font-medium text-foreground">
+          No puzzles match these filters
+        </p>
+        <p className="mt-1 text-[12px] text-muted-foreground">
+          Choose a wider rating band or theme, then start a new session.
+        </p>
+        <Button
+          type="button"
+          className="mt-4 h-9"
+          onClick={() => {
+            setRatingBand("all");
+            setTheme("all");
+            setPuzzles(
+              buildPuzzleSession(
+                allPuzzles,
+                dueIds,
+                "all",
+                "all",
+                Number(sessionLength),
+              ),
+            );
+            setIndex(0);
+          }}
+        >
+          Reset filters
+        </Button>
+      </div>
+    );
+  }
+
+  if (!setup) {
+    return (
+      <div className="rounded-xl border border-border/80 bg-surface-1 p-6 text-[12px] text-muted-foreground">
+        Preparing the next puzzle.
       </div>
     );
   }
@@ -343,6 +398,16 @@ function PuzzlePanel() {
                 toast.error("Use a UCI move such as e2e4 or a7a8q.");
                 return;
               }
+              try {
+                new Chess(setup.fen).move({
+                  from: match[1],
+                  to: match[2],
+                  promotion: match[3],
+                });
+              } catch {
+                toast.error("That move is not legal in this position.");
+                return;
+              }
               void answer(
                 match[1],
                 match[2],
@@ -383,6 +448,11 @@ function PuzzlePanel() {
                 {feedback.correct ? "Correct" : "Not quite"}
               </div>
               <p className="mt-1">{feedback.message}</p>
+              {lastAttempt ? (
+                <p className="mt-1 font-mono text-[10px] opacity-80">
+                  Your move: {lastAttempt}
+                </p>
+              ) : null}
             </div>
           ) : (
             <p className="rounded-lg border border-border/70 bg-surface-2/60 p-3 text-[12px] leading-relaxed text-muted-foreground">

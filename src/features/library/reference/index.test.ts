@@ -46,12 +46,12 @@ describe("reference library", () => {
             ? [block.text]
             : block.type === "list"
               ? block.items
-              : [block.caption],
+              : [],
         )
         .join(" ");
       const words = text.split(/\s+/).filter(Boolean).length;
       expect(words, article.slug).toBeGreaterThanOrEqual(700);
-      expect(words, article.slug).toBeLessThanOrEqual(1200);
+      expect(words, article.slug).toBeLessThanOrEqual(1000);
     }
   });
 

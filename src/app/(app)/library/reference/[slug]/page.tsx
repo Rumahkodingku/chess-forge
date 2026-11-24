@@ -12,7 +12,7 @@ export default async function LibraryReferenceArticlePage({
       title="Reference article"
       description="Read the idea, study the diagram, and leave one note you can use."
     >
-      <ReferenceArticleReader slug={slug} />
+      <ReferenceArticleReader key={slug} slug={slug} />
     </LibraryShell>
   );
 }

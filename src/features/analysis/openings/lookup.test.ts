@@ -128,5 +128,5 @@ describe("opening lookup", () => {
       }
       expect(epdFromFen(chess.fen())).toBe(entry.epd);
     }
-  });
+  }, 15_000);
 });

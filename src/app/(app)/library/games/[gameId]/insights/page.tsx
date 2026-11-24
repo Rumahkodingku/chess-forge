@@ -12,7 +12,7 @@ export default async function LibraryGameInsightsPage({
       title="Game insights"
       description="See what the engine found, then turn your own mistakes into a focused drill."
     >
-      <GameInsightsWorkspace gameId={gameId} />
+      <GameInsightsWorkspace key={gameId} gameId={gameId} />
     </LibraryShell>
   );
 }

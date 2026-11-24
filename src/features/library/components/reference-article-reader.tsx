@@ -270,8 +270,8 @@ export function ReferenceArticleReader({ slug }: { slug: string }) {
                     item.type === "article"
                       ? `/library/reference/${item.id}`
                       : item.type === "opening"
-                        ? "/library/openings"
-                        : "/library/practice"
+                        ? `/library/openings?search=${encodeURIComponent(item.label)}`
+                        : `/library/practice?theme=${encodeURIComponent(item.id)}`
                   }
                   className="flex items-center justify-between gap-2 rounded-md border border-border/70 bg-surface-2/60 px-3 py-2 text-[11px] text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
                 >

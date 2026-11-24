@@ -12,7 +12,7 @@ export default async function LibraryRepertoireDetailPage({
       title="Repertoire line"
       description="Step through the line and review the reason behind it."
     >
-      <RepertoireDetail lineId={lineId} />
+      <RepertoireDetail key={lineId} lineId={lineId} />
     </LibraryShell>
   );
 }
