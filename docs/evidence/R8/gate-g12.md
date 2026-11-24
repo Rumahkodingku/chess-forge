@@ -9,7 +9,7 @@
 | Check | Command | Result |
 | --- | --- | --- |
 | Lint, typecheck, unit tests, production build | `npm run check:all` | Passed |
-| Unit and integration tests | `npm test` | 63 files, 303 tests passed |
+| Unit and integration tests | `npm test` | 63 files, 304 tests passed |
 | Development E2E | `npx playwright test` | 34 tests passed |
 | Production E2E | `npm run test:e2e:prod` | 7 tests passed |
 | Opening data validation | `src/features/analysis/openings/lookup.test.ts` | 3,865 entries with legal move sequences |
@@ -20,7 +20,7 @@
 ## Feature evidence
 
 - `/library` loads five areas: Openings, Repertoire, Practice, My Games, Reference.
-- Opening Explorer searches names/ECO, supports legal board moves, named continuations, repertoire save, notes, and deep links from Analysis.
+- Opening Explorer searches names/ECO, supports legal board moves (including promotion), named continuations, on-demand Stockfish, repertoire save, notes, and deep links from Analysis.
 - Repertoire supports line creation, edit, delete, board preview, persistence, and detail view.
 - Notes persist for opening, game, and article targets.
 - My Games lists local games, resolves player side from Settings aliases, shows insights, and runs mistake drills against Stockfish.

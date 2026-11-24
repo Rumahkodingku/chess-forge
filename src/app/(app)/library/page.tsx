@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { LibraryOverview } from "@/features/library/components/library-overview";
 import { LibrarySearch } from "@/features/library/components/library-search";
 
 const areas = [
@@ -57,6 +58,7 @@ export default function LibraryPage() {
         title="Chess Library"
         description="A local study workspace for openings, repertoire, tactics, and the lessons inside your own games. Everything here works offline."
       />
+      <LibraryOverview />
       <LibrarySearch />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {areas.map(({ href, label, description, Icon }) => (

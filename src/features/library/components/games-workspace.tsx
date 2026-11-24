@@ -6,6 +6,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Game } from "@/features/games/types";
 import { resolveUserSide } from "@/features/library/games/aliases";
 import { DEFAULT_SETTINGS } from "@/features/settings/types";
@@ -28,6 +35,10 @@ export function GamesWorkspace() {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [source, setSource] = useState("all");
+  const [side, setSide] = useState("all");
+  const [analyzed, setAnalyzed] = useState("all");
+  const [result, setResult] = useState("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -38,19 +49,19 @@ export function GamesWorkspace() {
           createGameRepository(db).list(),
           createSettingsRepository(db).get(),
         ]);
-        const assessments = createMoveAssessmentRepository(db);
-        const next: GameRow[] = [];
-        for (const game of games) {
-          const items = await assessments.listByGame(game.id);
-          next.push({
+        const allAssessments =
+          await createMoveAssessmentRepository(db).listAll();
+        const analyzedGames = new Set(
+          allAssessments.map((assessment) => assessment.gameId),
+        );
+        const next: GameRow[] = games.map((game) => ({
+          game,
+          userSide: resolveUserSide(
             game,
-            userSide: resolveUserSide(
-              game,
-              (settings ?? DEFAULT_SETTINGS).playerNames,
-            ),
-            analyzed: items.length > 0,
-          });
-        }
+            (settings ?? DEFAULT_SETTINGS).playerNames,
+          ),
+          analyzed: analyzedGames.has(game.id),
+        }));
         if (!cancelled) {
           setRows(
             next.sort((left, right) =>
@@ -74,9 +85,16 @@ export function GamesWorkspace() {
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return rows;
-    return rows.filter(({ game }) =>
-      [
+    return rows.filter((row) => {
+      const { game } = row;
+      if (source !== "all" && game.source !== source) {
+        return false;
+      }
+      if (result !== "all" && game.metadata.result !== result) return false;
+      if (analyzed !== "all" && String(row.analyzed) !== analyzed) return false;
+      if (side !== "all" && row.userSide !== side) return false;
+      if (!normalized) return true;
+      return [
         game.metadata.white,
         game.metadata.black,
         game.metadata.event,
@@ -84,9 +102,9 @@ export function GamesWorkspace() {
         game.metadata.eco,
       ]
         .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(normalized)),
-    );
-  }, [query, rows]);
+        .some((value) => value!.toLowerCase().includes(normalized));
+    });
+  }, [analyzed, query, result, rows, side, source]);
 
   if (state === "loading") {
     return (
@@ -119,6 +137,51 @@ export function GamesWorkspace() {
           aria-label="Search games"
           className="h-10 pl-9"
         />
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Select value={side} onValueChange={setSide}>
+          <SelectTrigger aria-label="Filter by side">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Any side</SelectItem>
+            <SelectItem value="w">White</SelectItem>
+            <SelectItem value="b">Black</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={analyzed} onValueChange={setAnalyzed}>
+          <SelectTrigger aria-label="Filter by analysis">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Any analysis</SelectItem>
+            <SelectItem value="true">Analyzed</SelectItem>
+            <SelectItem value="false">Not analyzed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={source} onValueChange={setSource}>
+          <SelectTrigger aria-label="Filter by source">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Any source</SelectItem>
+            <SelectItem value="pgn-text">Paste</SelectItem>
+            <SelectItem value="pgn-file">File</SelectItem>
+            <SelectItem value="chesscom">Chess.com</SelectItem>
+            <SelectItem value="lichess">Lichess</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={result} onValueChange={setResult}>
+          <SelectTrigger aria-label="Filter by result">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Any result</SelectItem>
+            <SelectItem value="1-0">White win</SelectItem>
+            <SelectItem value="0-1">Black win</SelectItem>
+            <SelectItem value="1/2-1/2">Draw</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {filtered.length ? (

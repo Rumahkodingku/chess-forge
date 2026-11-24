@@ -28,6 +28,7 @@ export function NotesPanel({
 }: NotesPanelProps) {
   const [notes, setNotes] = useState<LibraryNote[]>([]);
   const [body, setBody] = useState("");
+  const [editing, setEditing] = useState<LibraryNote | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function reload() {
@@ -64,20 +65,21 @@ export function NotesPanel({
       const db = await openChessForgeDatabase();
       const now = new Date().toISOString();
       await createLibraryNoteRepository(db).save({
-        id: crypto.randomUUID(),
+        id: editing?.id ?? crypto.randomUUID(),
         targetType,
         targetId,
         targetLabel,
         body,
-        tags: [],
-        pinned: false,
-        createdAt: now,
+        tags: editing?.tags ?? [],
+        pinned: editing?.pinned ?? false,
+        createdAt: editing?.createdAt ?? now,
         updatedAt: now,
         schemaVersion: 1,
       });
       setBody("");
+      setEditing(null);
       await reload();
-      toast.success("Note saved.");
+      toast.success(editing ? "Note updated." : "Note saved.");
     } catch (error) {
       toast.error(toErrorMessage(error));
     } finally {
@@ -157,6 +159,18 @@ export function NotesPanel({
                   <Pin aria-hidden className="size-3" />
                 )}
                 {note.pinned ? "Unpin" : "Pin"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-[10px]"
+                onClick={() => {
+                  setEditing(note);
+                  setBody(note.body);
+                }}
+              >
+                Edit
               </Button>
               <Button
                 type="button"

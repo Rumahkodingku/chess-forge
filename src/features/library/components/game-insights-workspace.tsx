@@ -15,7 +15,10 @@ import type {
   OpeningMatch,
   PositionAnalysis,
 } from "@/features/analysis/types";
-import { ChessgroundBoard } from "@/features/chess/chessground-board";
+import {
+  ChessgroundBoard,
+  type PromotionPiece,
+} from "@/features/chess/chessground-board";
 import type { Game } from "@/features/games/types";
 import { NotesPanel } from "@/features/library/components/notes-panel";
 import { resolveUserSide } from "@/features/library/games/aliases";
@@ -53,6 +56,7 @@ export function GameInsightsWorkspace({ gameId }: Props) {
   const [analysis, setAnalysis] = useState<PositionAnalysis | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const engineRef = useRef<BrowserStockfishEngine | null>(null);
+  const runRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,11 +119,13 @@ export function GameInsightsWorkspace({ gameId }: Props) {
     setAnalysis(null);
     setFeedback(null);
     setEngineState("loading");
+    const runId = ++runRef.current;
     engineRef.current?.quit();
     const engine = new BrowserStockfishEngine();
     engineRef.current = engine;
     try {
       await engine.load();
+      if (runRef.current !== runId) return;
       setEngineState("analysing");
       const result = await engine.analyse({
         fen: mistake.fenBefore,
@@ -127,17 +133,19 @@ export function GameInsightsWorkspace({ gameId }: Props) {
         multiPv: 1,
         configuration: settings.enginePreferences,
       });
+      if (runRef.current !== runId) return;
       setAnalysis(result);
       setEngineState("ready");
     } catch (engineError) {
+      if (runRef.current !== runId) return;
       setEngineState("error");
       setFeedback(toErrorMessage(engineError));
     }
   }
 
-  async function play(from: string, to: string) {
+  async function play(from: string, to: string, promotion?: PromotionPiece) {
     if (!analysis || !selected) return;
-    const uci = `${from}${to}`;
+    const uci = `${from}${to}${promotion ?? ""}`;
     const best = analysis.bestMoveUci ?? "";
     setFeedback(
       uci === best
@@ -357,7 +365,7 @@ export function GameInsightsWorkspace({ gameId }: Props) {
                 fen={selected.fenBefore}
                 orientation={selected.userSide === "w" ? "w" : "b"}
                 label="Mistake practice board"
-                onMove={(from, to) => void play(from, to)}
+                onMove={(from, to, promotion) => void play(from, to, promotion)}
               />
               <div className="mt-3 space-y-2">
                 <div className="flex items-center gap-2 text-[11px] text-muted-foreground">

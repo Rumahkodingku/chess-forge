@@ -43,6 +43,7 @@ export function LibrarySearch() {
   const [lines, setLines] = useState<RepertoireLine[]>([]);
   const [notes, setNotes] = useState<LibraryNote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +63,14 @@ export function LibrarySearch() {
         setGames(storedGames);
         setLines(storedLines);
         setNotes(storedNotes);
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Local Library index could not load.",
+          );
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -168,6 +177,11 @@ export function LibrarySearch() {
         <p className="mt-2 flex items-center gap-2 px-1 text-[11px] text-muted-foreground">
           <Loader2 aria-hidden className="size-3 animate-spin" />
           Loading local index
+        </p>
+      ) : null}
+      {error ? (
+        <p className="mt-2 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-[11px] text-destructive">
+          {error}
         </p>
       ) : null}
       {query.trim() && !loading ? (

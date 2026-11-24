@@ -25,7 +25,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChessgroundBoard } from "@/features/chess/chessground-board";
+import {
+  ChessgroundBoard,
+  type PromotionPiece,
+} from "@/features/chess/chessground-board";
 import { LibraryEnginePanel } from "@/features/library/components/library-engine-panel";
 import { NotesPanel } from "@/features/library/components/notes-panel";
 import { loadLibraryOpenings } from "@/features/library/openings/load";
@@ -92,15 +95,22 @@ export function OpeningExplorer() {
   );
   const currentName = current ? primaryName(current) : undefined;
 
+  useEffect(() => {
+    if (!current) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("fen", current.fen);
+    window.history.replaceState(null, "", url);
+  }, [current]);
+
   function goTo(node: OpeningNode | undefined) {
     if (!node) return;
     setCurrentId(node.id);
     setNotice(null);
   }
 
-  function playMove(from: string, to: string) {
+  function playMove(from: string, to: string, promotion?: PromotionPiece) {
     if (!tree || !current) return;
-    const move = `${from}${to}`;
+    const move = `${from}${to}${promotion ?? ""}`;
     const childId = current.childIds.find((id) => {
       const child = tree.nodes.get(id);
       return child?.move?.uci === move || child?.move?.uci.startsWith(move);
@@ -130,8 +140,21 @@ export function OpeningExplorer() {
     setSaving(true);
     try {
       const db = await openChessForgeDatabase();
+      const repository = createRepertoireRepository(db);
+      const lineKey = moves.map((move) => move.uci).join(" ");
+      const existing = await repository.list();
+      if (
+        existing.some(
+          (line) =>
+            line.side === side &&
+            line.moves.map((move) => move.uci).join(" ") === lineKey,
+        )
+      ) {
+        toast.message("That line is already in your repertoire.");
+        return;
+      }
       const now = new Date().toISOString();
-      await createRepertoireRepository(db).save({
+      await repository.save({
         id: crypto.randomUUID(),
         name: currentName?.name ?? "My opening line",
         side,

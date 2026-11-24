@@ -36,7 +36,7 @@ export function applyPuzzleSetup(puzzle: LibraryPuzzle): PuzzleSetup {
   return {
     puzzleId: puzzle.id,
     fen: chess.fen(),
-    lastMove: setup.san,
+    lastMove: puzzle.moves[0],
     sideToMove: chess.turn(),
     expectedUci,
     solution: puzzle.moves.slice(1),

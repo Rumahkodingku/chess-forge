@@ -68,12 +68,15 @@ function emptyCounts(): Record<MoveClassification, number> {
   };
 }
 
-function resultForSide(game: Game, side: "w" | "b"): "win" | "draw" | "loss" {
+function resultForSide(
+  game: Game,
+  side: "w" | "b",
+): "win" | "draw" | "loss" | null {
   const result = game.metadata.result;
   if (result === "1/2-1/2") return "draw";
   if (result === "1-0") return side === "w" ? "win" : "loss";
   if (result === "0-1") return side === "b" ? "win" : "loss";
-  return "draw";
+  return null;
 }
 
 export function buildGameInsights({

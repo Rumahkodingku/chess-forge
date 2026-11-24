@@ -17,6 +17,7 @@ import {
   getReferenceArticle,
   type ReferenceArticle,
 } from "@/features/library/reference";
+import type { LibraryNote } from "@/features/library/schemas";
 import {
   createLearningProgressRepository,
   createLibraryNoteRepository,
@@ -76,7 +77,7 @@ function ArticleBlock({
 export function ReferenceArticleReader({ slug }: { slug: string }) {
   const currentArticle = getReferenceArticle(slug);
   const [note, setNote] = useState("");
-  const [noteId, setNoteId] = useState<string | null>(null);
+  const [savedNote, setSavedNote] = useState<LibraryNote | null>(null);
   const [complete, setComplete] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -93,7 +94,7 @@ export function ReferenceArticleReader({ slug }: { slug: string }) {
         const first = notes[0];
         if (!cancelled) {
           setNote(first?.body ?? "");
-          setNoteId(first?.id ?? null);
+          setSavedNote(first ?? null);
           const progress = await createLearningProgressRepository(db).get(
             "reference",
             currentArticle.slug,
@@ -125,18 +126,20 @@ export function ReferenceArticleReader({ slug }: { slug: string }) {
     try {
       const db = await openChessForgeDatabase();
       const now = new Date().toISOString();
-      await createLibraryNoteRepository(db).save({
-        id: noteId ?? crypto.randomUUID(),
+      const record: LibraryNote = {
+        id: savedNote?.id ?? crypto.randomUUID(),
         targetType: "article",
         targetId: article.slug,
         targetLabel: article.title,
         body: note,
-        tags: [],
-        pinned: false,
-        createdAt: now,
+        tags: savedNote?.tags ?? [],
+        pinned: savedNote?.pinned ?? false,
+        createdAt: savedNote?.createdAt ?? now,
         updatedAt: now,
         schemaVersion: 1,
-      });
+      };
+      await createLibraryNoteRepository(db).save(record);
+      setSavedNote(record);
       toast.success("Article note saved.");
     } catch (error) {
       toast.error(toErrorMessage(error));

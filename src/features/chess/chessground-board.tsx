@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import type { AnalysisBoardTheme } from "@/features/chess/theme";
 import { cn } from "@/lib/utils";
 
+export type PromotionPiece = "q" | "r" | "b" | "n";
+
 interface ChessgroundBoardProps {
   fen: string;
   orientation: "w" | "b";
@@ -17,7 +19,7 @@ interface ChessgroundBoardProps {
   theme?: AnalysisBoardTheme;
   label?: string;
   className?: string;
-  onMove?: (from: string, to: string) => void;
+  onMove?: (from: string, to: string, promotion?: PromotionPiece) => void;
 }
 
 export function ChessgroundBoard({
@@ -31,7 +33,17 @@ export function ChessgroundBoard({
 }: ChessgroundBoardProps) {
   const elementRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<Api | null>(null);
+  const onMoveRef = useRef(onMove);
   const [failed, setFailed] = useState(false);
+  const [promotion, setPromotion] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
+  const interactive = Boolean(onMove);
+
+  useEffect(() => {
+    onMoveRef.current = onMove;
+  }, [onMove]);
 
   const position = useMemo(() => {
     try {
@@ -63,7 +75,7 @@ export function ChessgroundBoard({
       coordinates: true,
       coordinatesOnSquares: true,
       viewOnly: false,
-      ...(onMove
+      ...(interactive
         ? {
             movable: {
               free: false,
@@ -72,7 +84,19 @@ export function ChessgroundBoard({
               showDests: true,
             },
             events: {
-              move: (from: Key, to: Key) => onMove(from, to),
+              move: (from: Key, to: Key) => {
+                const needsPromotion = new Chess(fen)
+                  .moves({ verbose: true })
+                  .some(
+                    (move) =>
+                      move.from === from && move.to === to && move.promotion,
+                  );
+                if (needsPromotion) {
+                  setPromotion({ from, to });
+                } else {
+                  onMoveRef.current?.(from, to);
+                }
+              },
             },
           }
         : {}),
@@ -103,7 +127,7 @@ export function ChessgroundBoard({
       apiRef.current.set(config);
       apiRef.current.setShapes([]);
     }
-  }, [failed, fen, lastMove, onMove, orientation, position]);
+  }, [failed, fen, interactive, lastMove, orientation, position]);
 
   useEffect(() => {
     return () => {
@@ -153,11 +177,45 @@ export function ChessgroundBoard({
   }
 
   return (
-    <div
-      ref={elementRef}
-      role="img"
-      aria-label={label}
-      className={cn(`cg-theme-${theme}`, "cg-replay", className)}
-    />
+    <div className="relative">
+      <div
+        ref={elementRef}
+        role="img"
+        aria-label={label}
+        className={cn(`cg-theme-${theme}`, "cg-replay", className)}
+      />
+      {promotion ? (
+        <div
+          role="dialog"
+          aria-label="Choose promotion piece"
+          className="absolute inset-0 flex items-center justify-center bg-black/70 p-4"
+        >
+          <div className="grid grid-cols-4 gap-1 rounded-lg border border-border bg-surface-1 p-2">
+            {(
+              [
+                ["q", "Queen"],
+                ["r", "Rook"],
+                ["b", "Bishop"],
+                ["n", "Knight"],
+              ] as const
+            ).map(([piece, name]) => (
+              <Button
+                key={piece}
+                type="button"
+                variant="outline"
+                className="h-10 px-3 text-[12px]"
+                onClick={() => {
+                  const pending = promotion;
+                  setPromotion(null);
+                  onMoveRef.current?.(pending.from, pending.to, piece);
+                }}
+              >
+                {name}
+              </Button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

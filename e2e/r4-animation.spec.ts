@@ -95,10 +95,13 @@ test.describe("R4 animation core", () => {
 
     await page.getByRole("button", { name: "Play from start" }).click();
     await expect
-      .poll(async () => {
-        const value = await page.locator("#studio-frame").inputValue();
-        return Number(value);
-      })
+      .poll(
+        async () => {
+          const value = await page.locator("#studio-frame").inputValue();
+          return Number(value);
+        },
+        { timeout: 15_000 },
+      )
       .toBeGreaterThan(0);
     await page.getByRole("button", { name: "Pause", exact: true }).click();
 

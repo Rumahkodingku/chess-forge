@@ -90,7 +90,15 @@ function parseStoredList<T>(
   schema: { parse: (input: unknown) => T },
   label: string,
 ): T[] {
-  return values.map((value) => parseStored(value, schema, label) as T);
+  const parsed: T[] = [];
+  for (const value of values) {
+    try {
+      parsed.push(schema.parse(value));
+    } catch {
+      console.warn(`A stored ${label} record is invalid and was skipped.`);
+    }
+  }
+  return parsed;
 }
 
 interface ChessForgeDB extends DBSchema {
@@ -390,6 +398,7 @@ export interface PositionAnalysisRepository {
 
 export interface MoveAssessmentRepository {
   listByGame(gameId: string): Promise<MoveAssessment[]>;
+  listAll(): Promise<MoveAssessment[]>;
   replaceForGame(gameId: string, assessments: MoveAssessment[]): Promise<void>;
 }
 
@@ -601,6 +610,12 @@ export function createMoveAssessmentRepository(
       );
       return assessments.sort((left, right) => left.ply - right.ply);
     },
+    listAll: async () =>
+      parseStoredList(
+        await db.getAll("moveAssessments"),
+        moveAssessmentSchema,
+        "move assessment",
+      ),
     replaceForGame: async (gameId, assessments) => {
       const transaction = db.transaction("moveAssessments", "readwrite");
       const keys = await transaction.store.index("gameId").getAllKeys(gameId);

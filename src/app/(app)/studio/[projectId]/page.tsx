@@ -227,6 +227,12 @@ export default function StudioProjectPage() {
   }, [playerInstance]);
 
   useEffect(() => {
+    if (playNonce === 0 || !playerInstance) return;
+    const timer = window.setTimeout(() => playerInstance.setVolume(1), 250);
+    return () => window.clearTimeout(timer);
+  }, [playNonce, playerInstance]);
+
+  useEffect(() => {
     if (!project?.id || !playerInstance) return;
     const player = playerInstance;
     const onFrame = (event: { detail: { frame: number } }) => {
@@ -595,6 +601,7 @@ export default function StudioProjectPage() {
                     inputProps={{ project, resolvedAudioAssets }}
                     initialFrame={0}
                     autoPlay={playNonce > 0}
+                    initialVolume={playNonce > 0 ? 0 : 1}
                     durationInFrames={durationInFrames}
                     compositionWidth={project.canvas.width}
                     compositionHeight={project.canvas.height}

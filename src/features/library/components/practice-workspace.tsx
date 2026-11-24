@@ -8,12 +8,15 @@ import {
   RotateCcw,
   XCircle,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChessgroundBoard } from "@/features/chess/chessground-board";
+import {
+  ChessgroundBoard,
+  type PromotionPiece,
+} from "@/features/chess/chessground-board";
 import { loadLibraryOpenings } from "@/features/library/openings/load";
 import {
   type OpeningTree,
@@ -51,8 +54,27 @@ interface Feedback {
   message: string;
 }
 
-function uciOf(from: string, to: string): string {
-  return `${from}${to}`;
+function uciOf(from: string, to: string, promotion?: PromotionPiece): string {
+  return `${from}${to}${promotion ?? ""}`;
+}
+
+function randomPlyForSide(line: RepertoireLine): number {
+  const startTurn = line.startFen.split(" ")[1] === "b" ? "b" : "w";
+  const userTurn = line.side === "white" ? "w" : "b";
+  const candidates = line.moves
+    .map((_, index) => index)
+    .filter((index) => {
+      const turn =
+        startTurn === "w"
+          ? index % 2 === 0
+            ? "w"
+            : "b"
+          : index % 2 === 0
+            ? "b"
+            : "w";
+      return turn === userTurn;
+    });
+  return candidates[Math.floor(Math.random() * candidates.length)] ?? 0;
 }
 
 async function saveResult(
@@ -121,13 +143,13 @@ function PuzzlePanel() {
 
   const puzzle = puzzles[index];
 
-  async function answer(from: string, to: string) {
+  async function answer(from: string, to: string, promotion?: PromotionPiece) {
     if (!puzzle || feedback) return;
-    const correct = isCorrectPuzzleMove(puzzle, uciOf(from, to));
+    const correct = isCorrectPuzzleMove(puzzle, uciOf(from, to, promotion));
     setFeedback({
       correct,
       message: correct
-        ? "Correct. Keep the line going."
+        ? `Correct. Solution: ${setup?.solution.join(" ") ?? ""}.`
         : `Not this time. The expected move was ${setup?.expectedUci ?? "unavailable"}.`,
     });
     try {
@@ -163,7 +185,7 @@ function PuzzlePanel() {
           orientation={setup.sideToMove === "w" ? "w" : "b"}
           lastMove={setup.lastMove}
           label="Puzzle board"
-          onMove={(from, to) => void answer(from, to)}
+          onMove={(from, to, promotion) => void answer(from, to, promotion)}
         />
       </div>
       <Card className="border-border/80 bg-surface-1">
@@ -238,7 +260,14 @@ function RepertoirePanel() {
         const loaded = await createRepertoireRepository(db).list();
         if (cancelled) return;
         setLines(loaded);
-        setSelectedId(loaded[0]?.id ?? null);
+        const requested = new URLSearchParams(window.location.search).get(
+          "line",
+        );
+        setSelectedId(
+          requested && loaded.some((line) => line.id === requested)
+            ? requested
+            : (loaded[0]?.id ?? null),
+        );
       } catch (error) {
         toast.error(toErrorMessage(error));
       }
@@ -256,20 +285,16 @@ function RepertoirePanel() {
     }
     const selected = lines.find((item) => item.id === selectedId) ?? null;
     setLine(selected);
-    setPly(
-      selected
-        ? Math.max(0, Math.floor(Math.random() * selected.moves.length))
-        : 0,
-    );
+    setPly(selected ? randomPlyForSide(selected) : 0);
     setFeedback(null);
   }, [lines, selectedId]);
 
   const fen = line ? lineFen(START_FEN, line.moves.slice(0, ply)) : START_FEN;
   const expected = line?.moves[ply];
 
-  async function answer(from: string, to: string) {
+  async function answer(from: string, to: string, promotion?: PromotionPiece) {
     if (!line || !expected || feedback) return;
-    const correct = uciOf(from, to) === expected.uci;
+    const correct = uciOf(from, to, promotion) === expected.uci;
     setFeedback({
       correct,
       message: correct
@@ -298,7 +323,7 @@ function RepertoirePanel() {
           fen={fen}
           orientation={line?.side === "white" ? "w" : "b"}
           label="Repertoire review board"
-          onMove={(from, to) => void answer(from, to)}
+          onMove={(from, to, promotion) => void answer(from, to, promotion)}
         />
       </div>
       <Card className="border-border/80 bg-surface-1">
@@ -344,7 +369,7 @@ function RepertoirePanel() {
             className="h-9 border-border/80 bg-transparent px-3"
             onClick={() => {
               if (!line) return;
-              setPly(Math.floor(Math.random() * line.moves.length));
+              setPly(randomPlyForSide(line));
               setFeedback(null);
             }}
           >
@@ -363,35 +388,39 @@ function RecallPanel() {
   const [choices, setChoices] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
+  const askNext = useCallback((loaded: OpeningTree) => {
+    const named = [...loaded.nodes.values()].filter(
+      (node) => node.names.length > 0,
+    );
+    const target = named[Math.floor(Math.random() * named.length)];
+    if (!target) return;
+    setNodeId(target.id);
+    const names = new Set<string>();
+    for (const node of named) {
+      for (const name of node.names) names.add(name.name);
+    }
+    const options = [primaryName(target)?.name ?? "Unknown"];
+    for (const name of names) {
+      if (options.length >= 4) break;
+      if (!options.includes(name)) options.push(name);
+    }
+    setChoices(options.sort(() => Math.random() - 0.5));
+    setFeedback(null);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     loadLibraryOpenings()
       .then(({ tree: loaded }) => {
         if (cancelled) return;
         setTree(loaded);
-        const named = [...loaded.nodes.values()].filter(
-          (node) => node.names.length > 0,
-        );
-        const target = named[Math.floor(Math.random() * named.length)];
-        if (target) {
-          setNodeId(target.id);
-          const names = new Set<string>();
-          for (const node of named) {
-            for (const name of node.names) names.add(name.name);
-          }
-          const options = [primaryName(target)?.name ?? "Unknown"];
-          for (const name of names) {
-            if (options.length >= 4) break;
-            if (!options.includes(name)) options.push(name);
-          }
-          setChoices(options.sort(() => Math.random() - 0.5));
-        }
+        askNext(loaded);
       })
       .catch((error) => toast.error(toErrorMessage(error)));
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [askNext]);
 
   const node = tree && nodeId ? tree.nodes.get(nodeId) : undefined;
   const answer = node ? primaryName(node)?.name : undefined;
@@ -452,15 +481,26 @@ function RecallPanel() {
             </Button>
           ))}
           {feedback ? (
-            <p
-              className={`rounded-lg border p-3 text-[12px] ${
-                feedback.correct
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-                  : "border-amber-500/30 bg-amber-500/10 text-amber-200"
-              }`}
-            >
-              {feedback.message}
-            </p>
+            <>
+              <p
+                className={`rounded-lg border p-3 text-[12px] ${
+                  feedback.correct
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                    : "border-amber-500/30 bg-amber-500/10 text-amber-200"
+                }`}
+              >
+                {feedback.message}
+              </p>
+              <Button
+                type="button"
+                className="h-9 px-3"
+                onClick={() => {
+                  if (tree) askNext(tree);
+                }}
+              >
+                Next question
+              </Button>
+            </>
           ) : null}
         </CardContent>
       </Card>
