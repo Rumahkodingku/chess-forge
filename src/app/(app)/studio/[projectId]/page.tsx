@@ -91,6 +91,7 @@ export default function StudioProjectPage() {
   const [applyTemplateOpen, setApplyTemplateOpen] = useState(false);
   const [selectedSceneIndex, setSelectedSceneIndex] = useState(0);
   const [currentFrame, setCurrentFrame] = useState(0);
+  const [playNonce, setPlayNonce] = useState(0);
   const [resolvedAudioAssets, setResolvedAudioAssets] = useState<
     Record<string, string>
   >({});
@@ -588,9 +589,12 @@ export default function StudioProjectPage() {
               <>
                 <div className="mx-auto w-full max-w-[440px] overflow-hidden rounded-xl border border-border/80 bg-black">
                   <Player
+                    key={`${project.id}-${playNonce}`}
                     ref={attachPlayer}
                     component={ProjectPlayer}
                     inputProps={{ project, resolvedAudioAssets }}
+                    initialFrame={0}
+                    autoPlay={playNonce > 0}
                     durationInFrames={durationInFrames}
                     compositionWidth={project.canvas.width}
                     compositionHeight={project.canvas.height}
@@ -655,10 +659,14 @@ export default function StudioProjectPage() {
                     disabled={!playerInstance}
                     onClick={() => {
                       const player = playerRef.current;
-                      if (!player) return;
-                      player.play();
-                      player.seekTo(0);
-                      setTimeout(() => player.play(), 50);
+                      if (player) {
+                        player.play();
+                        player.pause();
+                        player.seekTo(0);
+                      }
+                      setSelectedSceneIndex(0);
+                      setCurrentFrame(0);
+                      setPlayNonce((value) => value + 1);
                     }}
                   >
                     Play from start
