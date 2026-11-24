@@ -17,6 +17,7 @@ import {
   ChessgroundBoard,
   type PromotionPiece,
 } from "@/features/chess/chessground-board";
+import { NotesPanel } from "@/features/library/components/notes-panel";
 import { loadLibraryOpenings } from "@/features/library/openings/load";
 import {
   type OpeningTree,
@@ -241,6 +242,11 @@ function PuzzlePanel() {
           </Button>
         </CardContent>
       </Card>
+      <NotesPanel
+        targetType="puzzle"
+        targetId={puzzle.id}
+        targetLabel={`Puzzle ${puzzle.id}`}
+      />
     </div>
   );
 }

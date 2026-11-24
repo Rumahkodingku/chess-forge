@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChessgroundBoard } from "@/features/chess/chessground-board";
+import { NotesPanel } from "@/features/library/components/notes-panel";
 import { lineFen, START_FEN } from "@/features/library/repertoire/model";
 import type { RepertoireLine } from "@/features/library/schemas";
 import {
@@ -155,6 +156,11 @@ export function RepertoireDetail({ lineId }: { lineId: string }) {
               No notes for this line yet.
             </p>
           )}
+          <NotesPanel
+            targetType="repertoire"
+            targetId={line.id}
+            targetLabel={line.name}
+          />
           <div className="flex gap-2">
             <Button
               asChild
