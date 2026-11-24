@@ -43,3 +43,9 @@
 - Read at least one article per category and confirm tone and accuracy.
 - Check the player-name alias flow with a real imported game.
 - Confirm that the 5,000-puzzle bundle feels acceptable on the reference device.
+
+## Review follow-up
+
+- Independent review on commit `a48996c` found one critical issue: promotion moves lost their piece suffix, so promotion puzzles could never be answered correctly. Fixed with a promotion chooser on the interactive board and a unit test.
+- Fixed in `5d2a803`: board no longer resets on every parent render, puzzle `lastMove` is UCI, repertoire review samples only the user's turns, unfinished games no longer count as draws, notes can be edited, article note metadata is preserved, duplicate repertoire lines are rejected, My Games has result/source/side/analysis filters, and Library search surfaces load errors.
+- Deferred minor items: mistake trainer cache reuse, stale-engine cancellation hardening, full unsaved-change guard, and deeper 700–1,000-word article copy.
