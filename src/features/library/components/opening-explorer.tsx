@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ChessgroundBoard } from "@/features/chess/chessground-board";
+import { LibraryEnginePanel } from "@/features/library/components/library-engine-panel";
 import { NotesPanel } from "@/features/library/components/notes-panel";
 import { loadLibraryOpenings } from "@/features/library/openings/load";
 import {
@@ -452,6 +453,8 @@ export function OpeningExplorer() {
             )}
           </div>
         </div>
+
+        <LibraryEnginePanel fen={current.fen} />
 
         <NotesPanel
           targetType="opening"

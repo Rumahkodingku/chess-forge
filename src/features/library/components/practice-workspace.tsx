@@ -84,10 +84,13 @@ function PuzzlePanel() {
         const filtered = loaded.filter(
           (puzzle) => puzzle.rating >= 600 && puzzle.rating <= 2400,
         );
-        const shuffled = [...filtered].sort(
-          (left, right) => left.popularity - right.popularity,
+        const selected = [...filtered].sort(
+          (left, right) =>
+            right.popularity - left.popularity ||
+            left.rating - right.rating ||
+            left.id.localeCompare(right.id),
         );
-        setPuzzles(shuffled.slice(0, 10));
+        setPuzzles(selected.slice(0, 10));
         setState("ready");
       } catch (error) {
         if (!cancelled) {
