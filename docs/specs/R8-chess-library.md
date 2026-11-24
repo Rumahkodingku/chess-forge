@@ -1,7 +1,7 @@
 # R8 — Chess Library
 
 **Spec version:** 1.0
-**Status:** Implemented; Gate G12 passed with documented content-depth limitation
+**Status:** Implemented; Gate G12 passed
 **Phase:** R8 (roadmap insertion pending)
 **PRD mapping:** New module; supports G-03 and the target user's study goals
 **Exit gate:** G12

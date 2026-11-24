@@ -1,6 +1,7 @@
 "use client";
 
 import { BookOpen, Brain, StickyNote } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   createLearningProgressRepository,
@@ -12,6 +13,7 @@ export function LibraryOverview() {
   const [due, setDue] = useState(0);
   const [note, setNote] = useState<string | null>(null);
   const [completed, setCompleted] = useState(0);
+  const [continueSlug, setContinueSlug] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,6 +36,14 @@ export function LibraryOverview() {
           ).length,
         );
         setNote(notes[0]?.body ?? null);
+        const lastReference = [...progress]
+          .filter((item) => item.itemType === "reference")
+          .sort((left, right) =>
+            (right.lastReviewedAt ?? "").localeCompare(
+              left.lastReviewedAt ?? "",
+            ),
+          )[0];
+        setContinueSlug(lastReference?.itemId ?? null);
       } catch {
         // Overview is optional; the rest of the Library still works.
       }
@@ -45,7 +55,7 @@ export function LibraryOverview() {
   }, []);
 
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <div className="rounded-xl border border-border/80 bg-surface-1 p-4">
         <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <Brain aria-hidden className="size-3.5" />
@@ -71,6 +81,22 @@ export function LibraryOverview() {
           {note ?? "No notes yet"}
         </p>
       </div>
+      <Link
+        href={
+          continueSlug
+            ? `/library/reference/${continueSlug}`
+            : "/library/reference"
+        }
+        className="rounded-xl border border-border/80 bg-surface-1 p-4 transition-colors hover:border-border-strong"
+      >
+        <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <BookOpen aria-hidden className="size-3.5" />
+          Continue reading
+        </p>
+        <p className="mt-1 text-[12px] font-medium text-foreground">
+          {continueSlug ? "Resume the last article" : "Open the reference"}
+        </p>
+      </Link>
     </div>
   );
 }

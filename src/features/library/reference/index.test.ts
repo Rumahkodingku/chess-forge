@@ -36,6 +36,25 @@ describe("reference library", () => {
     }
   });
 
+  it("keeps every article in the long-form word range", () => {
+    for (const article of getReferenceArticles()) {
+      const text = article.blocks
+        .flatMap((block) =>
+          block.type === "paragraph" ||
+          block.type === "heading" ||
+          block.type === "callout"
+            ? [block.text]
+            : block.type === "list"
+              ? block.items
+              : [block.caption],
+        )
+        .join(" ");
+      const words = text.split(/\s+/).filter(Boolean).length;
+      expect(words, article.slug).toBeGreaterThanOrEqual(700);
+      expect(words, article.slug).toBeLessThanOrEqual(1200);
+    }
+  });
+
   it("finds an article by slug and search", () => {
     expect(getReferenceArticle("pins-absolute-and-relative")?.title).toBe(
       "Pins: Absolute and Relative",

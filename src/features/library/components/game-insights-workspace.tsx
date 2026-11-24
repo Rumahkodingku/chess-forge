@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BrowserStockfishEngine,
+  DEFAULT_ENGINE_VERSION,
   type EngineState,
 } from "@/features/analysis/engine/stockfish-adapter";
+import { analysisCacheKey } from "@/features/analysis/engine/uci";
 import { findGameOpening } from "@/features/analysis/openings/lookup";
 import type {
   MoveAssessment,
@@ -35,6 +37,7 @@ import {
   createGameRepository,
   createLearningProgressRepository,
   createMoveAssessmentRepository,
+  createPositionAnalysisRepository,
   createSettingsRepository,
   openChessForgeDatabase,
 } from "@/features/storage/db";
@@ -121,6 +124,28 @@ export function GameInsightsWorkspace({ gameId }: Props) {
     setEngineState("loading");
     const runId = ++runRef.current;
     engineRef.current?.quit();
+    const configuration = settings.enginePreferences;
+    try {
+      const db = await openChessForgeDatabase();
+      const cacheKey = analysisCacheKey({
+        fen: mistake.fenBefore,
+        engineVersion: DEFAULT_ENGINE_VERSION,
+        depth: configuration.depth ?? 14,
+        movetimeMs: configuration.movetimeMs,
+        multiPv: 1,
+        threads: 1,
+        hashMb: configuration.hashMb,
+      });
+      const cached = await createPositionAnalysisRepository(db).get(cacheKey);
+      if (cached) {
+        if (runRef.current !== runId) return;
+        setAnalysis(cached);
+        setEngineState("ready");
+        return;
+      }
+    } catch {
+      // Cache is an optimisation; fall through to the engine.
+    }
     const engine = new BrowserStockfishEngine();
     engineRef.current = engine;
     try {

@@ -6,6 +6,13 @@ import { useDeferredValue, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   getReferenceArticles,
   searchReferenceArticles,
 } from "@/features/library/reference";
@@ -22,12 +29,15 @@ export function ReferenceWorkspace() {
   const [query, setQuery] = useState("");
   const [category, setCategory] =
     useState<(typeof CATEGORIES)[number][0]>("all");
+  const [difficulty, setDifficulty] = useState("all");
   const deferred = useDeferredValue(query);
   const articles = deferred.trim()
     ? searchReferenceArticles(deferred)
     : getReferenceArticles();
   const visible = articles.filter(
-    (article) => category === "all" || article.category === category,
+    (article) =>
+      (category === "all" || article.category === category) &&
+      (difficulty === "all" || article.difficulty === difficulty),
   );
 
   return (
@@ -61,6 +71,19 @@ export function ReferenceWorkspace() {
             {label}
           </button>
         ))}
+      </div>
+      <div className="max-w-48">
+        <Select value={difficulty} onValueChange={setDifficulty}>
+          <SelectTrigger aria-label="Filter reference by difficulty">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Any difficulty</SelectItem>
+            <SelectItem value="beginner">Beginner</SelectItem>
+            <SelectItem value="intermediate">Intermediate</SelectItem>
+            <SelectItem value="advanced">Advanced</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {visible.map((article) => (

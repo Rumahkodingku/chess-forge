@@ -35,6 +35,7 @@ import { loadLibraryOpenings } from "@/features/library/openings/load";
 import {
   lineSan,
   namedContinuations,
+  nodeForLine,
   type OpeningNode,
   type OpeningTree,
   openingNodeAtFen,
@@ -56,6 +57,7 @@ export function OpeningExplorer() {
   const [tree, setTree] = useState<OpeningTree | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [mode, setMode] = useState<"explore" | "counters">("explore");
   const [orientation, setOrientation] = useState<"w" | "b">("w");
   const [side, setSide] = useState<"white" | "black">("white");
   const [notice, setNotice] = useState<string | null>(null);
@@ -67,8 +69,18 @@ export function OpeningExplorer() {
       try {
         const { tree: loaded } = await loadLibraryOpenings();
         if (cancelled) return;
-        const fen = new URLSearchParams(window.location.search).get("fen");
-        const linked = fen ? openingNodeAtFen(loaded, fen) : undefined;
+        const params = new URLSearchParams(window.location.search);
+        const moves = params
+          .get("line")
+          ?.split(",")
+          .map((move) => move.trim())
+          .filter(Boolean);
+        const fen = params.get("fen");
+        const linked = moves?.length
+          ? nodeForLine(loaded, moves)
+          : fen
+            ? openingNodeAtFen(loaded, fen)
+            : undefined;
         setTree(loaded);
         setCurrentId(linked?.id ?? loaded.rootId);
         setState("ready");
@@ -99,8 +111,14 @@ export function OpeningExplorer() {
     if (!current) return;
     const url = new URL(window.location.href);
     url.searchParams.set("fen", current.fen);
+    const line = path
+      .filter((node) => node.move)
+      .map((node) => node.move?.uci)
+      .join(",");
+    if (line) url.searchParams.set("line", line);
+    else url.searchParams.delete("line");
     window.history.replaceState(null, "", url);
-  }, [current]);
+  }, [current, path]);
 
   function goTo(node: OpeningNode | undefined) {
     if (!node) return;
@@ -143,20 +161,26 @@ export function OpeningExplorer() {
       const repository = createRepertoireRepository(db);
       const lineKey = moves.map((move) => move.uci).join(" ");
       const existing = await repository.list();
-      if (
-        existing.some(
-          (line) =>
-            line.side === side &&
-            line.moves.map((move) => move.uci).join(" ") === lineKey,
-        )
-      ) {
-        toast.message("That line is already in your repertoire.");
-        return;
+      const duplicate = existing.find(
+        (line) =>
+          line.side === side &&
+          line.moves.map((move) => move.uci).join(" ") === lineKey,
+      );
+      if (duplicate) {
+        const shouldDuplicate = window.confirm(
+          "This line already exists. OK to duplicate it, Cancel to open the existing line.",
+        );
+        if (!shouldDuplicate) {
+          window.location.href = `/library/repertoire/${duplicate.id}`;
+          return;
+        }
       }
       const now = new Date().toISOString();
       await repository.save({
         id: crypto.randomUUID(),
-        name: currentName?.name ?? "My opening line",
+        name: duplicate
+          ? `${currentName?.name ?? "My opening line"} copy`
+          : (currentName?.name ?? "My opening line"),
         side,
         eco: currentName?.eco,
         openingName: currentName?.name,
@@ -228,6 +252,28 @@ export function OpeningExplorer() {
               aria-label="Search openings"
               className="h-10 pl-9"
             />
+          </div>
+          <div className="mt-2 flex gap-1 rounded-lg border border-border/70 bg-surface-2/60 p-1">
+            {(
+              [
+                ["explore", "Explore"],
+                ["counters", "Counters & Defenses"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setMode(value)}
+                aria-current={mode === value ? "page" : undefined}
+                className={`min-h-8 rounded-md px-2.5 text-[11px] font-medium ${
+                  mode === value
+                    ? "bg-brand/15 text-brand"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
           {query.trim() ? (
             <div className="mt-2 max-h-48 space-y-1 overflow-y-auto">

@@ -13,10 +13,19 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   ChessgroundBoard,
   type PromotionPiece,
 } from "@/features/chess/chessground-board";
+import { DueReviewPanel } from "@/features/library/components/due-review-panel";
 import { NotesPanel } from "@/features/library/components/notes-panel";
 import { loadLibraryOpenings } from "@/features/library/openings/load";
 import {
@@ -90,30 +99,77 @@ async function saveResult(
   await repository.save(reviewProgress(progress, correct));
 }
 
+function puzzleMatches(
+  puzzle: LibraryPuzzle,
+  ratingBand: string,
+  theme: string,
+): boolean {
+  if (ratingBand === "600-1200" && puzzle.rating >= 1200) return false;
+  if (
+    ratingBand === "1200-1800" &&
+    (puzzle.rating < 1200 || puzzle.rating >= 1800)
+  ) {
+    return false;
+  }
+  if (ratingBand === "1800-2400" && puzzle.rating < 1800) return false;
+  if (theme === "all") return true;
+  if (theme === "mate") {
+    return puzzle.themes.some((item) => item.startsWith("mateIn"));
+  }
+  return puzzle.themes.includes(theme);
+}
+
+function buildPuzzleSession(
+  loaded: LibraryPuzzle[],
+  dueIds: Set<string>,
+  ratingBand: string,
+  theme: string,
+  length: number,
+): LibraryPuzzle[] {
+  const matching = loaded.filter((puzzle) =>
+    puzzleMatches(puzzle, ratingBand, theme),
+  );
+  const due = matching.filter((puzzle) => dueIds.has(puzzle.id));
+  const rest = matching
+    .filter((puzzle) => !dueIds.has(puzzle.id))
+    .sort(
+      (left, right) =>
+        right.popularity - left.popularity ||
+        left.rating - right.rating ||
+        left.id.localeCompare(right.id),
+    );
+  return [...due, ...rest].slice(0, length);
+}
+
 function PuzzlePanel() {
+  const [allPuzzles, setAllPuzzles] = useState<LibraryPuzzle[]>([]);
+  const [dueIds, setDueIds] = useState<Set<string>>(new Set());
   const [puzzles, setPuzzles] = useState<LibraryPuzzle[]>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [index, setIndex] = useState(0);
   const [setup, setSetup] = useState<PuzzleSetup | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [solved, setSolved] = useState(0);
+  const [ratingBand, setRatingBand] = useState("all");
+  const [theme, setTheme] = useState("all");
+  const [sessionLength, setSessionLength] = useState("10");
+  const [wrongAttempts, setWrongAttempts] = useState(0);
+  const [boardNonce, setBoardNonce] = useState(0);
+  const [answerText, setAnswerText] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
         const loaded = await loadLibraryPuzzles();
+        const db = await openChessForgeDatabase();
+        const due =
+          await createLearningProgressRepository(db).listDue("puzzle");
         if (cancelled) return;
-        const filtered = loaded.filter(
-          (puzzle) => puzzle.rating >= 600 && puzzle.rating <= 2400,
-        );
-        const selected = [...filtered].sort(
-          (left, right) =>
-            right.popularity - left.popularity ||
-            left.rating - right.rating ||
-            left.id.localeCompare(right.id),
-        );
-        setPuzzles(selected.slice(0, 10));
+        const dueSet = new Set(due.map((item) => item.itemId));
+        setAllPuzzles(loaded);
+        setDueIds(dueSet);
+        setPuzzles(buildPuzzleSession(loaded, dueSet, "all", "all", 10));
         setState("ready");
       } catch (error) {
         if (!cancelled) {
@@ -128,6 +184,20 @@ function PuzzlePanel() {
     };
   }, []);
 
+  function startSession() {
+    setPuzzles(
+      buildPuzzleSession(
+        allPuzzles,
+        dueIds,
+        ratingBand,
+        theme,
+        Number(sessionLength),
+      ),
+    );
+    setIndex(0);
+    setSolved(0);
+  }
+
   useEffect(() => {
     const puzzle = puzzles[index];
     if (!puzzle) {
@@ -137,6 +207,7 @@ function PuzzlePanel() {
     try {
       setSetup(applyPuzzleSetup(puzzle));
       setFeedback(null);
+      setWrongAttempts(0);
     } catch {
       setIndex((value) => value + 1);
     }
@@ -145,17 +216,22 @@ function PuzzlePanel() {
   const puzzle = puzzles[index];
 
   async function answer(from: string, to: string, promotion?: PromotionPiece) {
-    if (!puzzle || feedback) return;
+    if (!puzzle) return;
+    if (feedback?.correct || wrongAttempts >= 2) return;
     const correct = isCorrectPuzzleMove(puzzle, uciOf(from, to, promotion));
     setFeedback({
       correct,
       message: correct
         ? `Correct. Solution: ${setup?.solution.join(" ") ?? ""}.`
-        : `Not this time. The expected move was ${setup?.expectedUci ?? "unavailable"}.`,
+        : `Not this time. Try one more move. Expected: ${setup?.expectedUci ?? "unavailable"}.`,
     });
     try {
       await saveResult("puzzle", puzzle.id, correct);
       if (correct) setSolved((value) => value + 1);
+      else {
+        setWrongAttempts((value) => value + 1);
+        setBoardNonce((value) => value + 1);
+      }
     } catch (error) {
       toast.error(toErrorMessage(error));
     }
@@ -182,6 +258,7 @@ function PuzzlePanel() {
     <div className="grid gap-4 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
       <div className="rounded-xl border border-border/80 bg-surface-1 p-3">
         <ChessgroundBoard
+          key={`${puzzle.id}-${boardNonce}`}
           fen={setup.fen}
           orientation={setup.sideToMove === "w" ? "w" : "b"}
           lastMove={setup.lastMove}
@@ -201,12 +278,94 @@ function PuzzlePanel() {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Select value={ratingBand} onValueChange={setRatingBand}>
+              <SelectTrigger aria-label="Puzzle rating band">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any rating</SelectItem>
+                <SelectItem value="600-1200">600–1200</SelectItem>
+                <SelectItem value="1200-1800">1200–1800</SelectItem>
+                <SelectItem value="1800-2400">1800–2400</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={theme} onValueChange={setTheme}>
+              <SelectTrigger aria-label="Puzzle theme">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any theme</SelectItem>
+                <SelectItem value="mate">Mate</SelectItem>
+                <SelectItem value="fork">Fork</SelectItem>
+                <SelectItem value="pin">Pin</SelectItem>
+                <SelectItem value="skewer">Skewer</SelectItem>
+                <SelectItem value="discoveredAttack">
+                  Discovered attack
+                </SelectItem>
+                <SelectItem value="endgame">Endgame</SelectItem>
+                <SelectItem value="sacrifice">Sacrifice</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sessionLength} onValueChange={setSessionLength}>
+              <SelectTrigger aria-label="Session length">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 puzzles</SelectItem>
+                <SelectItem value="20">20 puzzles</SelectItem>
+                <SelectItem value="50">50 puzzles</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 border-border/80 bg-transparent px-3"
+              onClick={startSession}
+            >
+              New session
+            </Button>
+          </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">{solved} solved</Badge>
             <Badge variant="outline">
               {setup.sideToMove === "w" ? "White to move" : "Black to move"}
             </Badge>
           </div>
+          <form
+            className="flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const match = /^([a-h][1-8])([a-h][1-8])([qrbn])?$/.exec(
+                answerText.trim(),
+              );
+              if (!match) {
+                toast.error("Use a UCI move such as e2e4 or a7a8q.");
+                return;
+              }
+              void answer(
+                match[1],
+                match[2],
+                match[3] as PromotionPiece | undefined,
+              );
+              setAnswerText("");
+            }}
+          >
+            <Input
+              value={answerText}
+              onChange={(event) => setAnswerText(event.target.value)}
+              placeholder="Or type a UCI move, e.g. e2e4"
+              aria-label="Puzzle answer"
+              className="h-9"
+            />
+            <Button
+              type="submit"
+              variant="outline"
+              className="h-9 border-border/80 bg-transparent px-3"
+            >
+              Play move
+            </Button>
+          </form>
           {feedback ? (
             <div
               className={`rounded-lg border p-3 text-[12px] leading-relaxed ${
@@ -528,6 +687,7 @@ export function PracticeWorkspace() {
 
   return (
     <div className="space-y-4">
+      <DueReviewPanel />
       <div className="flex flex-wrap gap-1 rounded-xl border border-border/80 bg-surface-1 p-1">
         {(
           [

@@ -2,7 +2,7 @@
 
 import { CheckCircle2, ChevronLeft, Loader2, StickyNote } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,8 @@ export function ReferenceArticleReader({ slug }: { slug: string }) {
   const [savedNote, setSavedNote] = useState<LibraryNote | null>(null);
   const [complete, setComplete] = useState(false);
   const [saving, setSaving] = useState(false);
+  const noteTouched = useRef(false);
+  const completeTouched = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,13 +95,15 @@ export function ReferenceArticleReader({ slug }: { slug: string }) {
         );
         const first = notes[0];
         if (!cancelled) {
-          setNote(first?.body ?? "");
+          if (!noteTouched.current) setNote(first?.body ?? "");
           setSavedNote(first ?? null);
           const progress = await createLearningProgressRepository(db).get(
             "reference",
             currentArticle.slug,
           );
-          if (!cancelled) setComplete(Boolean(progress?.correct));
+          if (!cancelled && !completeTouched.current) {
+            setComplete(Boolean(progress?.correct));
+          }
         }
       } catch (error) {
         if (!cancelled) toast.error(toErrorMessage(error));
@@ -149,6 +153,7 @@ export function ReferenceArticleReader({ slug }: { slug: string }) {
   }
 
   async function markComplete() {
+    completeTouched.current = true;
     try {
       const db = await openChessForgeDatabase();
       const repository = createLearningProgressRepository(db);
@@ -231,7 +236,10 @@ export function ReferenceArticleReader({ slug }: { slug: string }) {
           <CardContent className="space-y-3">
             <Textarea
               value={note}
-              onChange={(event) => setNote(event.target.value)}
+              onChange={(event) => {
+                noteTouched.current = true;
+                setNote(event.target.value);
+              }}
               placeholder="What will you try in your next game?"
               aria-label="Article note"
               className="min-h-28"
@@ -256,13 +264,20 @@ export function ReferenceArticleReader({ slug }: { slug: string }) {
             </CardHeader>
             <CardContent className="space-y-1.5">
               {article.related.map((item) => (
-                <p
+                <Link
                   key={`${item.type}-${item.id}`}
-                  className="rounded-md border border-border/70 bg-surface-2/60 px-3 py-2 text-[11px] text-muted-foreground"
+                  href={
+                    item.type === "article"
+                      ? `/library/reference/${item.id}`
+                      : item.type === "opening"
+                        ? "/library/openings"
+                        : "/library/practice"
+                  }
+                  className="flex items-center justify-between gap-2 rounded-md border border-border/70 bg-surface-2/60 px-3 py-2 text-[11px] text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
                 >
-                  <span className="text-foreground">{item.label}</span> ·{" "}
-                  {item.type}
-                </p>
+                  <span className="text-foreground">{item.label}</span>
+                  <span>{item.type}</span>
+                </Link>
               ))}
             </CardContent>
           </Card>

@@ -89,6 +89,23 @@ export function buildOpeningTree(entries: OpeningEntry[]): OpeningTree {
   return { rootId: ROOT_ID, nodes };
 }
 
+export function nodeForLine(
+  tree: OpeningTree,
+  uciMoves: string[],
+): OpeningNode | undefined {
+  let node: OpeningNode | undefined = tree.nodes.get(tree.rootId);
+  if (!node) return undefined;
+  for (const uci of uciMoves) {
+    const current: OpeningNode = node;
+    const next: OpeningNode | undefined = current.childIds
+      .map((id) => tree.nodes.get(id))
+      .find((child) => child?.move?.uci === uci);
+    if (!next) return current;
+    node = next;
+  }
+  return node;
+}
+
 export function openingNodeAtFen(
   tree: OpeningTree,
   fen: string,

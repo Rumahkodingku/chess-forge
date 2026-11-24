@@ -4,6 +4,7 @@ import {
   buildOpeningTree,
   lineSan,
   namedContinuations,
+  nodeForLine,
   openingNodeAtFen,
   pathToNode,
   searchOpenings,
@@ -80,6 +81,13 @@ describe("opening tree", () => {
       "King's Pawn Game",
       "Open Game",
     ]);
+  });
+
+  it("finds a node by a UCI line and stops at an illegal suffix", () => {
+    const tree = buildOpeningTree(entries);
+    expect(nodeForLine(tree, ["e2e4", "e7e5"])?.move?.san).toBe("e5");
+    expect(nodeForLine(tree, ["e2e4", "e7e6"])?.move?.san).toBe("e4");
+    expect(nodeForLine(tree, ["bad"])?.id).toBe(tree.rootId);
   });
 
   it("returns the root-to-node path", () => {

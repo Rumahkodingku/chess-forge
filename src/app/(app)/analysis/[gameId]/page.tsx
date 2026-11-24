@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,8 @@ import {
   boardThemeFromSetting,
 } from "@/features/chess/theme";
 import type { Game, Move } from "@/features/games/types";
+import { NotesPanel } from "@/features/library/components/notes-panel";
+import { resolveUserSide } from "@/features/library/games/aliases";
 import {
   type ApplicationSettings,
   DEFAULT_SETTINGS,
@@ -77,6 +80,7 @@ import {
   createMoveAssessmentRepository,
   createPositionAnalysisRepository,
   createProjectRepository,
+  createRepertoireRepository,
   createSettingsRepository,
   openChessForgeDatabase,
 } from "@/features/storage/db";
@@ -134,6 +138,7 @@ export default function AnalysisGamePage() {
   const [gameError, setGameError] = useState<string | null>(null);
   const [decisionBusy, setDecisionBusy] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [savingOpening, setSavingOpening] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const engineRef = useRef<BrowserStockfishEngine | null>(null);
@@ -577,6 +582,52 @@ export default function AnalysisGamePage() {
     }
   }
 
+  async function saveOpeningToRepertoire() {
+    const opening = summary?.opening;
+    if (!game || !opening) return;
+    const moves = game.moves
+      .slice(0, opening.ply)
+      .map((move) => ({ san: move.san, uci: move.uci }));
+    if (!moves.length) return;
+    setSavingOpening(true);
+    try {
+      const db = await openChessForgeDatabase();
+      const repository = createRepertoireRepository(db);
+      const lineKey = moves.map((move) => move.uci).join(" ");
+      const existing = await repository.list();
+      if (
+        existing.some(
+          (line) => line.moves.map((move) => move.uci).join(" ") === lineKey,
+        )
+      ) {
+        toast.message("That opening is already in your repertoire.");
+        return;
+      }
+      const now = new Date().toISOString();
+      const side = resolveUserSide(game, settings.playerNames) ?? "w";
+      await repository.save({
+        id: crypto.randomUUID(),
+        name: opening.name,
+        side: side === "w" ? "white" : "black",
+        eco: opening.eco,
+        openingName: opening.name,
+        startFen: game.initialFen,
+        moves,
+        notes: "",
+        priority: "core",
+        tags: [],
+        createdAt: now,
+        updatedAt: now,
+        schemaVersion: 1,
+      });
+      toast.success("Opening saved to your repertoire.");
+    } catch (error) {
+      toast.error(toErrorMessage(error));
+    } finally {
+      setSavingOpening(false);
+    }
+  }
+
   if (loadState === "invalid" || loadState === "missing") {
     return (
       <div className="space-y-6">
@@ -740,6 +791,18 @@ export default function AnalysisGamePage() {
                       Library
                     </Link>
                   </Button>
+                  {summary.opening ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 border-border/80 bg-transparent px-3"
+                      disabled={savingOpening}
+                      onClick={() => void saveOpeningToRepertoire()}
+                    >
+                      Add opening
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
                     variant="outline"
@@ -944,6 +1007,14 @@ export default function AnalysisGamePage() {
               />
             </CardContent>
           </Card>
+
+          {currentMove ? (
+            <NotesPanel
+              targetType="move"
+              targetId={`${game.id}:${currentMove.ply}`}
+              targetLabel={moveLabel(currentMove)}
+            />
+          ) : null}
 
           <GameSummaryPanel
             summary={summary}

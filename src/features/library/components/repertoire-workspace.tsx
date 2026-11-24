@@ -27,6 +27,7 @@ import type {
   RepertoirePriority,
 } from "@/features/library/schemas";
 import {
+  createLearningProgressRepository,
   createRepertoireRepository,
   openChessForgeDatabase,
 } from "@/features/storage/db";
@@ -55,6 +56,11 @@ const EMPTY_EDITOR: EditorState = {
 
 export function RepertoireWorkspace() {
   const [lines, setLines] = useState<RepertoireLine[]>([]);
+  const [dueByLine, setDueByLine] = useState<Record<string, boolean>>({});
+  const [sideFilter, setSideFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [ecoFilter, setEcoFilter] = useState("all");
+  const [sort, setSort] = useState("updated");
   const [state, setState] = useState<LoadState>("loading");
   const [error, setError] = useState<string | null>(null);
   const [editor, setEditor] = useState<EditorState | null>(null);
@@ -63,7 +69,22 @@ export function RepertoireWorkspace() {
   const reload = useCallback(async () => {
     try {
       const db = await openChessForgeDatabase();
-      setLines(await createRepertoireRepository(db).list());
+      const [stored, progress] = await Promise.all([
+        createRepertoireRepository(db).list(),
+        createLearningProgressRepository(db).listAll(),
+      ]);
+      setLines(stored);
+      const now = new Date().toISOString();
+      setDueByLine(
+        Object.fromEntries(
+          progress
+            .filter(
+              (item) =>
+                item.itemType === "repertoire-line" && item.nextReviewAt <= now,
+            )
+            .map((item) => [item.itemId, true]),
+        ),
+      );
       setState("ready");
     } catch (loadError) {
       setError(toErrorMessage(loadError));
@@ -74,6 +95,21 @@ export function RepertoireWorkspace() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    if (!editor) return;
+    function warn(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [editor]);
+
+  function confirmDiscard(): boolean {
+    if (!editor) return true;
+    return window.confirm("Discard unsaved repertoire changes?");
+  }
 
   const previewFen = useMemo(() => {
     if (!editor?.movesText.trim()) return START_FEN;
@@ -86,6 +122,37 @@ export function RepertoireWorkspace() {
       return START_FEN;
     }
   }, [editor?.movesText]);
+
+  const ecoOptions = useMemo(
+    () =>
+      [
+        ...new Set(lines.map((line) => line.eco).filter(Boolean)),
+      ].sort() as string[],
+    [lines],
+  );
+
+  const visibleLines = useMemo(() => {
+    const filtered = lines.filter(
+      (line) =>
+        (sideFilter === "all" || line.side === sideFilter) &&
+        (priorityFilter === "all" || line.priority === priorityFilter) &&
+        (ecoFilter === "all" || line.eco === ecoFilter),
+    );
+    return [...filtered].sort((left, right) => {
+      if (sort === "name") return left.name.localeCompare(right.name);
+      if (sort === "priority") {
+        const order = { core: 0, secondary: 1, idea: 2 };
+        return order[left.priority] - order[right.priority];
+      }
+      if (sort === "due") {
+        return (
+          Number(dueByLine[right.id] ?? false) -
+          Number(dueByLine[left.id] ?? false)
+        );
+      }
+      return right.updatedAt.localeCompare(left.updatedAt);
+    });
+  }, [dueByLine, ecoFilter, lines, priorityFilter, sideFilter, sort]);
 
   async function saveEditor() {
     if (!editor) return;
@@ -119,6 +186,24 @@ export function RepertoireWorkspace() {
       toast.error(toErrorMessage(saveError));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function duplicate(line: RepertoireLine) {
+    try {
+      const db = await openChessForgeDatabase();
+      const now = new Date().toISOString();
+      await createRepertoireRepository(db).save({
+        ...line,
+        id: crypto.randomUUID(),
+        name: `${line.name} copy`,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await reload();
+      toast.success("Repertoire line duplicated.");
+    } catch (error) {
+      toast.error(toErrorMessage(error));
     }
   }
 
@@ -173,14 +258,63 @@ export function RepertoireWorkspace() {
           <Button
             type="button"
             className="h-9 px-3"
-            onClick={() => setEditor({ ...EMPTY_EDITOR })}
+            onClick={() => {
+              if (confirmDiscard()) setEditor({ ...EMPTY_EDITOR });
+            }}
           >
             <Plus aria-hidden className="size-3.5" />
             New line
           </Button>
         </div>
-        {lines.length ? (
-          lines.map((line) => (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <Select value={sideFilter} onValueChange={setSideFilter}>
+            <SelectTrigger aria-label="Filter repertoire by side">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any side</SelectItem>
+              <SelectItem value="white">White</SelectItem>
+              <SelectItem value="black">Black</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger aria-label="Filter repertoire by priority">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any priority</SelectItem>
+              <SelectItem value="core">Core</SelectItem>
+              <SelectItem value="secondary">Secondary</SelectItem>
+              <SelectItem value="idea">Idea</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={ecoFilter} onValueChange={setEcoFilter}>
+            <SelectTrigger aria-label="Filter repertoire by ECO">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any ECO</SelectItem>
+              {ecoOptions.map((eco) => (
+                <SelectItem key={eco} value={eco}>
+                  {eco}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sort} onValueChange={setSort}>
+            <SelectTrigger aria-label="Sort repertoire">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="updated">Recently updated</SelectItem>
+              <SelectItem value="name">Name</SelectItem>
+              <SelectItem value="priority">Priority</SelectItem>
+              <SelectItem value="due">Due first</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {visibleLines.length ? (
+          visibleLines.map((line) => (
             <Card key={line.id} className="border-border/80 bg-surface-1">
               <CardHeader className="flex-row items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -192,7 +326,12 @@ export function RepertoireWorkspace() {
                     {line.eco ? ` · ${line.eco}` : ""} · {line.moves.length} ply
                   </p>
                 </div>
-                <Badge variant="outline">{line.priority}</Badge>
+                <div className="flex shrink-0 gap-1">
+                  {dueByLine[line.id] ? (
+                    <Badge variant="destructive">Due</Badge>
+                  ) : null}
+                  <Badge variant="outline">{line.priority}</Badge>
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
@@ -220,6 +359,15 @@ export function RepertoireWorkspace() {
                     className="h-8 border-border/80 bg-transparent px-3"
                   >
                     <Link href={`/library/repertoire/${line.id}`}>Open</Link>
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 border-border/80 bg-transparent px-3"
+                    onClick={() => void duplicate(line)}
+                  >
+                    Duplicate
                   </Button>
                   <Button
                     type="button"
@@ -378,7 +526,9 @@ export function RepertoireWorkspace() {
                   type="button"
                   variant="outline"
                   className="h-9 border-border/80 bg-transparent px-3"
-                  onClick={() => setEditor(null)}
+                  onClick={() => {
+                    if (confirmDiscard()) setEditor(null);
+                  }}
                 >
                   Cancel
                 </Button>

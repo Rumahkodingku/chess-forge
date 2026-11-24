@@ -5,7 +5,7 @@ roadmap_version: "1.0"
 prd_version: "1.0"
 prd_revision: "1.1"
 status: Approved for implementation
-last_updated: 2026-11-23
+last_updated: 2026-11-24
 language: en
 ---
 
@@ -145,6 +145,7 @@ Each phase has entry criteria, tasks, acceptance criteria, a Definition of Done,
 | R5    | PH-4        | Video Studio                         | G9        |
 | R6    | PH-5        | Export                               | G10       |
 | R7    | PH-6        | Hardening and release                | G11       |
+| R8    | New         | Chess Library study workspace        | G12       |
 
 ### 3.4 Dependency graph
 
@@ -155,6 +156,7 @@ Each phase has entry criteria, tasks, acceptance criteria, a Definition of Done,
 - R4 scene model and board renderer are required by R5.
 - R5 project model is required by R6.
 - R6 must pass before R7.
+- R6 must pass before R8. R7 hardening remains independent of R8.
 - Cross-cutting testing, accessibility, security, and documentation work runs in every phase.
 
 ### 3.5 Definition of Ready and Done
@@ -624,6 +626,32 @@ The UI must label it `Candidate Brilliant`, store `pending`, `accepted`, or `rej
 ### 12.3 Exit gate
 
 - **G11:** AC-08 and AC-09 pass and the release checklist is complete.
+
+---
+
+## 12A. Phase R8 — Chess Library
+
+**PRD mapping:** New study module; supports G-03 and the target user's study goals.
+**Goal:** Add an offline study workspace for openings, repertoire, personal notes, game insights, tactics practice, and reference material.
+**Entry criteria:** Gate G10 passes.
+**Spec:** `docs/specs/R8-chess-library.md`.
+**Gate evidence:** `docs/evidence/R8/gate-g12.md`.
+
+### 12A.1 Scope
+
+- Opening Explorer and Counters & Defenses from the CC0 `chess-openings` dataset.
+- 5,000 bundled CC0 Lichess puzzles with a puzzle trainer.
+- Repertoire review and opening recall.
+- Personal repertoire lines and freeform notes.
+- My Games browser, side-aware insights, and mistake drills.
+- 30 original reference articles across strategy, tactics, middlegame, and endgame.
+- Player-name aliases in Settings.
+- IndexedDB v2 stores for notes, repertoire, and learning progress.
+
+### 12A.2 Exit gate
+
+- **G12:** `docs/specs/R8-chess-library.md` acceptance criteria pass, including `npm run check:all`, dev E2E, production E2E, migration tests, data validation, and content review.
+- R8 data must be added to the R7 backup/restore manifest when that work is implemented.
 
 ---
 
