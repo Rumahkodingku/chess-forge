@@ -189,8 +189,10 @@ export function SettingsWorkspace() {
       const link = document.createElement("a");
       link.href = url;
       link.download = `chessforge-backup-${new Date().toISOString().slice(0, 10)}.chessforge.zip`;
+      document.body.append(link);
       link.click();
-      URL.revokeObjectURL(url);
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success("Backup exported.");
     } catch (error) {
       toast.error(

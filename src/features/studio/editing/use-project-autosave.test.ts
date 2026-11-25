@@ -62,6 +62,18 @@ describe("useProjectAutosave", () => {
     vi.useRealTimers();
   });
 
+  it("reports a failed saveNow so callers can block dependent actions", async () => {
+    const save = vi.fn().mockRejectedValue(new Error("disk full"));
+    const { result } = renderHook(() =>
+      useProjectAutosave({ project: base, enabled: true, save }),
+    );
+
+    await act(async () => {
+      expect(await result.current.saveNow()).toBe(false);
+    });
+    expect(result.current.state).toBe("error");
+  });
+
   it("does not save while disabled", async () => {
     vi.useFakeTimers();
     const save = vi.fn(async () => {});

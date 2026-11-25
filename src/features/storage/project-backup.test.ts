@@ -103,6 +103,34 @@ describe("project backup", () => {
     ]);
   });
 
+  it("rejects a project that references a missing audio asset", async () => {
+    const db = await openChessForgeDatabase();
+    const project = createWalkingSkeletonProject({
+      game: parseSinglePgn(PGN),
+      selectedPly: 1,
+    });
+    const missingId = "44444444-4444-4444-8444-444444444444";
+    await createProjectRepository(db).save({
+      ...project,
+      audioTracks: [
+        {
+          id: "track-1",
+          kind: "music",
+          source: { type: "asset", assetId: missingId },
+          startFrame: 0,
+          durationInFrames: 30,
+          volume: 0.5,
+          muted: false,
+          loop: false,
+        },
+      ],
+    });
+
+    await expect(exportProjectBackup(project.id)).rejects.toThrow(
+      "references a missing audio asset",
+    );
+  });
+
   it("rejects a project that does not exist", async () => {
     await expect(
       exportProjectBackup("33333333-3333-4333-8333-333333333333"),

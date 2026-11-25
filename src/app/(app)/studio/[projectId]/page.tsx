@@ -405,14 +405,22 @@ export default function StudioProjectPage() {
     if (!project) return;
     setExportingBackup(true);
     try {
-      await persistence.saveNow();
+      const saved = await persistence.saveNow();
+      if (!saved) {
+        toast.error(
+          "The project could not be saved, so the backup was not exported. Fix the save error and retry.",
+        );
+        return;
+      }
       const blob = await exportProjectBackup(project.id);
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `${projectSlug(project.name)}.chessforge`;
+      document.body.append(link);
       link.click();
-      URL.revokeObjectURL(url);
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success("Project backup exported.");
     } catch (error) {
       toast.error(toErrorMessage(error));
