@@ -32,7 +32,12 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import type { ChessComGameSummary } from "@/features/games/adapters/chesscom";
+import {
+  readChessComArchivesResponse,
+  readChessComGamesResponse,
+  readLichessGameResponse,
+  readLichessGamesResponse,
+} from "@/features/games/api-response";
 import {
   candidateFromChessComSummary,
   candidateFromGame,
@@ -53,7 +58,7 @@ import {
   createGameRepository,
   openChessForgeDatabase,
 } from "@/features/storage/db";
-import { toErrorMessage } from "@/lib/errors";
+import { toErrorNotice } from "@/lib/errors";
 
 export type ImportSource = "paste" | "file" | "chesscom" | "lichess";
 
@@ -75,7 +80,9 @@ interface ApiErrorBody {
 async function readApiError(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as ApiErrorBody;
-    return body.error?.message ?? `Request failed with ${response.status}.`;
+    const message =
+      body.error?.message ?? `Request failed with ${response.status}.`;
+    return body.error?.recovery ? `${message} ${body.error.recovery}` : message;
   } catch {
     return `Request failed with ${response.status}.`;
   }
@@ -310,7 +317,7 @@ function PastePanel({
     try {
       onCandidates(parsePgnCandidates(pgn, "pgn-text", "paste"));
     } catch (parseError) {
-      setError(toErrorMessage(parseError));
+      setError(toErrorNotice(parseError));
     }
   }
 
@@ -404,7 +411,7 @@ function FilePanel({
         parseError instanceof PgnFileError ||
           parseError instanceof PgnImportError
           ? parseError.message
-          : toErrorMessage(parseError),
+          : toErrorNotice(parseError),
       );
     } finally {
       setBusy(false);
@@ -514,15 +521,16 @@ function ChessComPanel({
         setError(await readApiError(response));
         return;
       }
-      const body = (await response.json()) as { archives: string[] };
-      const options = body.archives
+      const body: unknown = await response.json();
+      const archives = readChessComArchivesResponse(body);
+      const options = archives
         .map(parseArchive)
         .filter((option): option is ArchiveOption => Boolean(option))
         .sort((left, right) => right.label.localeCompare(left.label));
       setArchives(options);
       setArchive(options[0]?.label ?? "");
     } catch (error) {
-      setError(toErrorMessage(error));
+      setError(toErrorNotice(error));
     } finally {
       setBusy(null);
     }
@@ -544,16 +552,10 @@ function ChessComPanel({
         setError(await readApiError(response));
         return;
       }
-      const body = (await response.json()) as {
-        games: ChessComGameSummary[];
-        warnings?: string[];
-      };
-      onCandidates(
-        body.games.map(candidateFromChessComSummary),
-        body.warnings ?? [],
-      );
+      const body = readChessComGamesResponse(await response.json());
+      onCandidates(body.games.map(candidateFromChessComSummary), body.warnings);
     } catch (error) {
-      setError(toErrorMessage(error));
+      setError(toErrorNotice(error));
     } finally {
       setBusy(null);
     }
@@ -689,11 +691,11 @@ function LichessPanel({
       const body: unknown = await response.json();
       const games =
         mode === "username"
-          ? (body as { games: Game[] }).games
-          : [(body as { game: Game }).game];
+          ? readLichessGamesResponse(body)
+          : [readLichessGameResponse(body)];
       onCandidates(games.map(candidateFromGame), []);
     } catch (error) {
-      setError(toErrorMessage(error));
+      setError(toErrorNotice(error));
     } finally {
       setBusy(false);
     }
@@ -901,7 +903,7 @@ export function ImportWorkspace() {
       }
       setPreview(withWarnings(game, candidate.warnings));
     } catch (parseError) {
-      markInvalid(toErrorMessage(parseError));
+      markInvalid(toErrorNotice(parseError));
     }
   }
 
@@ -914,7 +916,7 @@ export function ImportWorkspace() {
       await createGameRepository(db).save(preview);
       router.push(`/analysis/${preview.id}`);
     } catch (importError) {
-      setError(toErrorMessage(importError));
+      setError(toErrorNotice(importError));
       setImporting(false);
     }
   }

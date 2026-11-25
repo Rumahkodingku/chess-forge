@@ -20,6 +20,7 @@ import {
 } from "@/features/storage/db";
 import { formatBytes } from "@/features/storage/use-storage-status";
 import {
+  canRetryWithoutAudio,
   type FormatCapability,
   resolveSelectedFormat,
   shouldUseOpfs,
@@ -45,11 +46,7 @@ import type {
   AspectRatio,
   VideoProject,
 } from "@/features/studio/scene/scene.types";
-import {
-  ExportError,
-  toErrorMessage,
-  UnsupportedCapabilityError,
-} from "@/lib/errors";
+import { toErrorNotice } from "@/lib/errors";
 
 type ExportStatus =
   | "checking"
@@ -79,16 +76,6 @@ const labelClass = "grid gap-1 text-[10px] text-muted-foreground";
 const selectClass =
   "h-8 rounded border border-border/70 bg-background px-2 text-[11px] text-foreground";
 
-function errorMessage(error: unknown): string {
-  if (error instanceof ExportError) {
-    return `${error.message}${error.recovery ? ` ${error.recovery}` : ""}`;
-  }
-  if (error instanceof UnsupportedCapabilityError) {
-    return `${error.message}${error.recovery ? ` ${error.recovery}` : ""}`;
-  }
-  return toErrorMessage(error);
-}
-
 export function ExportPanel({
   project,
   resolvedAudioAssets,
@@ -114,6 +101,7 @@ export function ExportPanel({
   const [status, setStatus] = useState<ExportStatus>("checking");
   const [progress, setProgress] = useState<ExportProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [audioRetry, setAudioRetry] = useState(false);
   const [fallbackWarning, setFallbackWarning] = useState(false);
   const [result, setResult] = useState<{
     url: string;
@@ -228,7 +216,7 @@ export function ExportPanel({
         setStatus((current) => (current === "rendering" ? current : "ready"));
       } catch (checkError) {
         if (!cancelled) {
-          setCapabilityError(errorMessage(checkError));
+          setCapabilityError(toErrorNotice(checkError));
           setChecking(false);
           setStatus("error");
         }
@@ -292,11 +280,13 @@ export function ExportPanel({
     return cloned;
   }
 
-  async function startExport() {
+  async function startExport(options?: { includeAudio?: boolean }) {
     if (!selectedFormat || durationState === "blocked") return;
+    const withAudio = options?.includeAudio ?? includeAudio;
     controllerRef.current?.abort();
     clearResult();
     setError(null);
+    setAudioRetry(false);
     setFallbackWarning(false);
     setProgress(null);
     setStatus("rendering");
@@ -310,11 +300,13 @@ export function ExportPanel({
       audioCodec: selectedFormat.audioCodec,
       resolution,
       quality,
-      includeAudio: includeAudio && hasAudio,
+      includeAudio: withAudio && hasAudio,
       fileName: sanitizeExportName(fileName),
     };
     try {
-      const audioAssets = await cloneAudioUrls(resolvedAudioAssets);
+      const audioAssets = withAudio
+        ? await cloneAudioUrls(resolvedAudioAssets)
+        : {};
       const output = await exportProject({
         project,
         config,
@@ -345,7 +337,10 @@ export function ExportPanel({
         setProgress(null);
       } else {
         setStatus("error");
-        setError(errorMessage(exportFailure));
+        setError(toErrorNotice(exportFailure));
+        setAudioRetry(
+          canRetryWithoutAudio(exportFailure, includeAudio && hasAudio),
+        );
       }
     } finally {
       renderingRef.current = false;
@@ -634,12 +629,39 @@ export function ExportPanel({
         </p>
 
         {error ? (
-          <p
-            role="alert"
-            className="text-[11px] leading-relaxed text-destructive"
-          >
-            {error}
-          </p>
+          <div className="space-y-2">
+            <p
+              role="alert"
+              className="text-[11px] leading-relaxed text-destructive"
+            >
+              {error}
+            </p>
+            {status === "error" ? (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void startExport()}
+                >
+                  Retry export
+                </Button>
+                {audioRetry ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setIncludeAudio(false);
+                      void startExport({ includeAudio: false });
+                    }}
+                  >
+                    Retry without audio
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         ) : null}
 
         {result ? (

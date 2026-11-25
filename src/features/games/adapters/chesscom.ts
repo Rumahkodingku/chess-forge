@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { parsePgn } from "@/features/games/pgn";
 import type { Game } from "@/features/games/types";
+import { ValidationError } from "@/lib/errors";
 import { cachedFetch, HttpError } from "@/lib/http";
 
 const archivesResponseSchema = z.object({
@@ -38,6 +39,13 @@ const gamesResponseSchema = z.object({
   games: z.array(chessComGameSchema),
 });
 
+function unexpectedResponse(): ValidationError {
+  return new ValidationError(
+    "Chess.com returned an unexpected response.",
+    "Retry once. If it persists, paste the PGN manually.",
+  );
+}
+
 export type ChessComGame = z.infer<typeof chessComGameSchema>;
 
 export async function fetchChessComArchives(
@@ -54,7 +62,11 @@ export async function fetchChessComArchives(
     throw new HttpError("Chess.com could not return the game archives.");
   }
   const json: unknown = await response.json();
-  return archivesResponseSchema.parse(json).archives;
+  try {
+    return archivesResponseSchema.parse(json).archives;
+  } catch {
+    throw unexpectedResponse();
+  }
 }
 
 export async function fetchChessComGames(
@@ -74,7 +86,11 @@ export async function fetchChessComGames(
     throw new HttpError("Chess.com could not return the monthly games.");
   }
   const json: unknown = await response.json();
-  return gamesResponseSchema.parse(json).games;
+  try {
+    return gamesResponseSchema.parse(json).games;
+  } catch {
+    throw unexpectedResponse();
+  }
 }
 
 export interface ChessComConversion {

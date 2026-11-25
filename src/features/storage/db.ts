@@ -74,15 +74,13 @@ function parseStored<T>(
   value: T | undefined,
   schema: { parse: (input: unknown) => T },
   label: string,
+  recovery = "Export a backup, then clear site data before re-importing.",
 ): T | undefined {
   if (value === undefined) return undefined;
   try {
     return schema.parse(value);
   } catch {
-    throw new ValidationError(
-      `Stored ${label} data is invalid.`,
-      "Export a backup, then clear site data before re-importing.",
-    );
+    throw new ValidationError(`Stored ${label} data is invalid.`, recovery);
   }
 }
 
@@ -386,6 +384,10 @@ export interface ProjectRepository {
   delete(id: string): Promise<void>;
 }
 
+export interface ProjectRepositoryOptions {
+  onInvalidRecord?: (id: string | undefined) => void;
+}
+
 export interface TemplateRepository {
   getById(id: string): Promise<Template | undefined>;
   list(): Promise<Template[]>;
@@ -465,6 +467,7 @@ export function createGameRepository(db: ChessForgeDatabase): GameRepository {
 
 export function createProjectRepository(
   db: ChessForgeDatabase,
+  options: ProjectRepositoryOptions = {},
 ): ProjectRepository {
   const normalizeStored = (record: unknown) => {
     try {
@@ -490,7 +493,15 @@ export function createProjectRepository(
         try {
           projects.push(normalizeStored(record));
         } catch {
+          const id =
+            typeof record === "object" &&
+            record !== null &&
+            "id" in record &&
+            typeof record.id === "string"
+              ? record.id
+              : undefined;
           console.warn("A stored project is invalid and was skipped.");
+          options.onInvalidRecord?.(id);
         }
       }
       return projects;
@@ -551,14 +562,22 @@ export function createTemplateRepository(
 }
 
 export function createAssetRepository(db: ChessForgeDatabase): AssetRepository {
+  const recover =
+    "Re-upload the audio file or remove the audio track that references it.";
   return {
     getById: async (id) =>
-      parseStored(await db.get("assets", id), assetRecordSchema, "asset"),
+      parseStored(
+        await db.get("assets", id),
+        assetRecordSchema,
+        "asset",
+        recover,
+      ),
     findByHash: async (hash) =>
       parseStored(
         await db.getFromIndex("assets", "hash", hash),
         assetRecordSchema,
         "asset",
+        recover,
       ),
     save: async (asset) => {
       await db.put("assets", assetRecordSchema.parse(asset));

@@ -121,3 +121,10 @@ export function toErrorMessage(error: unknown): string {
   }
   return "Something went wrong.";
 }
+
+export function toErrorNotice(error: unknown): string {
+  if (error instanceof AppError && error.recovery) {
+    return `${error.message} ${error.recovery}`;
+  }
+  return toErrorMessage(error);
+}

@@ -43,7 +43,7 @@ leaves the previous valid state intact.
 | Import and game data | Unknown external username | `covered` | "That Chess.com username was not found." / "That Lichess username was not found." | Check the username spelling and fetch again. | `src/features/games/adapters/chesscom.ts`, `lichess.ts` 404 paths |
 | Import and game data | Rate-limited external API | `covered` | "Too many requests. Try again in N seconds." | Wait for the shown interval, then retry. | `src/lib/rate-limit.ts`; Route Handler tests are manual |
 | Import and game data | Private/unavailable game | `covered` | "That Lichess game was not found." or the provider's export error. | Use another public game or open it on the provider first. | `src/features/games/adapters/lichess.ts` 404 paths |
-| Import and game data | API response format change | `partial` | Adapter validation errors surface as a request failure message. No dedicated "response changed" recovery text. | Retry once; if it persists, paste the PGN manually. Explicit validation recovery is an R7-T01 gap. | `src/features/games/adapters/chesscom.test.ts` "summarizes standard games without parsing their PGN" |
+| Import and game data | API response format change | `covered` | Import error banner: "Chess.com returned an unexpected response." or "Lichess returned an unexpected response." Adapter routes return the message plus recovery. | "Retry once. If it persists, paste the PGN manually." | `src/features/games/adapters/chesscom.test.ts` "converts a changed Chess.com payload into a recoverable validation error"; `src/features/games/adapters/lichess.test.ts` "converts a changed Lichess payload into a recoverable validation error"; `src/features/games/api-response.test.ts` unexpected-response tests |
 
 ## Engine
 
@@ -67,7 +67,7 @@ leaves the previous valid state intact.
 | Studio and animation | Scene references invalid ply | `partial` | Normalisation corrects the FEN from the move range and drops invalid keyframes/annotations; no explicit scene warning for an out-of-range ply. | Re-normalise on load; explicit validation warning is an R7-T01 gap. | `src/features/studio/scene/project-normalization.test.ts` "rejects a move range outside the game snapshot" |
 | Studio and animation | Unsupported move/position | `covered` | Project validation rejects an invalid scene or move range on save/load. | Fix the scene source or recreate it from an analysed move. | `src/features/studio/scene/project-normalization.test.ts`; `src/features/studio/creation/generate-project.test.ts` "rejects an inverted manual range" |
 | Studio and animation | Zero/negative duration | `partial` | Scene schema and operations clamp duration to at least one frame, but the UI clamps silently and gives no feedback. | Set a valid duration. Explicit UI feedback is an R7-T01 gap. | `src/features/studio/rendering/timeline.test.ts` "normalises scene starts and derives project duration"; `src/features/studio/editing/project-operations.test.ts` |
-| Studio and animation | Audio asset unavailable | `partial` | Preview warnings list "Audio asset <id> is missing or is not an audio file."; rendering skips the track. | Re-upload the audio asset. No direct link to the audio editor from the warning (R7-T01 gap). | `src/features/studio/rendering/audio.test.ts` "schedules project audio tracks and skips missing assets" |
+| Studio and animation | Audio asset unavailable | `covered` | Preview warnings list "Audio asset <id> is missing or is not an audio file." with an "Open audio editor" link; a corrupt asset record adds the re-upload recovery. | Use the link to open Project audio, then re-upload the file or remove the track. | `src/features/studio/rendering/audio.test.ts` "schedules project audio tracks and skips missing assets"; `src/features/storage/db.test.ts` "reports a corrupt asset with a re-upload recovery" |
 | Studio and animation | Text exceeds safe area | `covered` | Preview warnings list each overlay that exceeds the safe area. | Shorten or move the text; the warning names the scene. | `src/features/studio/rendering/text-safety.test.ts` |
 | Studio and animation | Aspect ratio layout fails | `covered` | Canvas presets resize the project and re-run text-safety warnings. | Pick another aspect preset or adjust overlays. | `src/features/studio/rendering/text-safety.test.ts`; manual studio check |
 | Studio and animation | Preview frame fails | `partial` | Remotion Player renders in the studio; no dedicated error boundary or retry around the preview. | Reload the studio. Error boundary/retry is an R7-T01 gap. | Manual check; no dedicated preview-failure test |
@@ -79,11 +79,11 @@ leaves the previous valid state intact.
 | Persistence and backup | IndexedDB unavailable | `covered` | `StorageUnavailableError`: "Browser storage is unavailable." Page load and the global error screen show the message. | Use a current browser with IndexedDB enabled. | Guard in `src/features/storage/db.ts`; manual browser check |
 | Persistence and backup | Quota exceeded | `covered` | `StorageQuotaError`: "Browser storage is full." | Remove unused projects or export a backup. | `toStorageError` in `src/features/storage/db.ts`; manual browser quota check |
 | Persistence and backup | Migration fails | `partial` | Upgrade errors throw `StorageMigrationError`; a blocked upgrade throws `StorageBlockedError` with "The local database upgrade is blocked by another ChessForge tab." Page-level callers show the message only; the global error screen shows message plus recovery for uncaught errors. | "Close other ChessForge tabs, reload this page, and try again." For a failed upgrade: "Export a backup, then clear site data and re-import." Showing recovery on page-level load errors is an R7-T01a gap. | `src/features/storage/db.test.ts` "surfaces a blocked upgrade as a recoverable error", "rejects a blocked upgrade when another tab keeps the old version open", and the v1→v2 migration test |
-| Persistence and backup | Project data corrupted | `partial` | Single-record reads throw `ValidationError` with "Stored project data is invalid." List reads skip corrupt records with a console warning; no dedicated recovery panel. | "Export a backup, then clear site data before re-importing." Skip-with-warning UI is an R7-T01b gap. | `src/features/storage/db.test.ts` "rejects schema drift when reading a stored game"; no project-corruption UI test |
+| Persistence and backup | Project data corrupted | `covered` | Studio project list shows "A stored project was damaged and was skipped. Export a backup, then clear site data and re-import." while valid projects load. Single reads throw `ValidationError` with the same recovery. | Follow the banner recovery, or open a valid project. | `src/features/storage/db.test.ts` "skips a corrupt project while other projects load" and "rejects schema drift when reading a stored game" |
 | Persistence and backup | Backup unsupported version | `partial` | Import rejects with "The backup manifest is invalid or uses an unsupported version." The actual version is not shown. | Use a backup from a compatible ChessForge version. Explicit version detail is an R7-T04/T03a gap. | `src/features/storage/backup.test.ts` "rejects a file that is not a ChessForge backup"; no versioned-manifest test |
 | Persistence and backup | Backup missing asset | `partial` | Import rejects with "The backup is missing an asset file." before the write transaction starts. | Use a complete application backup. | Code path in `src/features/storage/backup.ts`; no dedicated test |
 | Persistence and backup | Restore overwrite | `partial` | Full-app import asks for one confirmation before overwriting. Single-project overwrite with a second confirmation is not implemented yet. | Confirm the overwrite, or cancel and keep local data. | `src/features/settings/settings-workspace.tsx` confirm; single-project path pending R7-T03 |
-| Persistence and backup | Restore rollback | `partial` | Full-app restore runs in one `readwrite` transaction over all stores, so a failed write aborts. No injected-failure test and no explicit rollback UI yet. | Retry the import; the previous database stays intact. | `src/features/storage/backup.ts` transaction; failing-transaction test pending R7-T04 |
+| Persistence and backup | Restore rollback | `covered` | Full-app restore runs in one `readwrite` transaction over all stores. A failed write aborts; Settings shows the import error and the previous database stays intact. | Retry the import; local data is unchanged. | `src/features/storage/backup.test.ts` "rolls back the restore when a write fails" |
 
 ## Export
 
@@ -92,9 +92,9 @@ leaves the previous valid state intact.
 | Export | WebCodecs unavailable | `covered` | Export panel capability list marks formats unavailable; `UnsupportedCapabilityError` shows message and recovery. | "Try a current Chrome or Edge desktop browser." | `src/features/studio/export/capabilities.test.ts` "returns undefined when nothing is supported" |
 | Export | Codec unsupported | `covered` | Unsupported codecs are removed from the format list; selection falls back to a supported format. | Pick a supported format shown in the panel. | `src/features/studio/export/capabilities.test.ts` "keeps a supported selection and replaces an unsupported one" |
 | Export | Container cannot mux | `covered` | Capability check filters formats the browser cannot mux; export rejects with `ExportError`. | Choose a supported container (WebM in CI, MP4 in Chrome/Edge). | `src/features/studio/rendering/export-runner.test.ts` "throws an unsupported capability when nothing renders" |
-| Export | Rendering OOM | `partial` | Export panel shows the render error; OPFS failures retry once with `arraybuffer`. No explicit out-of-memory message or cleanup guidance. | Retry with a shorter project or lower resolution. OOM recovery is an R7-T01c gap. | `src/features/studio/rendering/export-runner.test.ts` "retries once with arraybuffer after an OPFS render failure" |
+| Export | Rendering OOM | `covered` | Export panel shows "The browser ran out of memory while rendering." with "Retry export" and the lower-resolution recovery text. The render result is disposed and the project snapshot is unchanged. | Lower the resolution, shorten the project, or retry without audio. | `src/features/studio/export/capabilities.test.ts` "classifies an out-of-memory render failure"; `src/features/studio/rendering/export-runner.test.ts` "reports an out-of-memory failure and keeps the project intact" and "disposes the render result after a successful export" |
 | Export | User cancels | `covered` | Export returns to idle; cancellation is preserved instead of wrapped as a failure. | Start the export again when ready. | `src/features/studio/rendering/export-runner.test.ts` "preserves a cancellation instead of wrapping it" |
-| Export | Audio encoding fails | `partial` | Export fails with `ExportError`; no separate audio-retry action. | Retry, or export without audio. Audio recovery is an R7-T01c gap. | `src/features/studio/rendering/export-runner.test.ts` audio paths |
+| Export | Audio encoding fails | `covered` | Export panel shows "The audio track could not be encoded." with "Retry export" and "Retry without audio". The project is unchanged. | Retry without audio, choose another format, or lower the audio quality. | `src/features/studio/export/capabilities.test.ts` "classifies an audio encoding failure only when audio is enabled"; `src/features/studio/rendering/export-runner.test.ts` "reports an audio encoding failure with retry-without-audio guidance" |
 | Export | Empty/invalid output | `covered` | Export validation rejects wrong container, dimensions, codec, duration, or audio metadata before download. | Adjust export settings and retry. | `src/features/studio/export/validate.test.ts` |
 | Export | Page closed during export | `covered` | Export state lives in the tab; closing cancels work and no partial file is downloaded. | Reopen the project and export again. | Manual check; export work is aborted with the page |
 
@@ -102,17 +102,16 @@ leaves the previous valid state intact.
 
 | Status | Rows |
 | --- | ---: |
-| `covered` | 29 |
-| `partial` | 17 |
+| `covered` | 35 |
+| `partial` | 11 |
 | `missing` | 0 |
 | **Total** | **46** |
 
 The matrix has no `missing` rows. Remaining `partial` rows map to R7 tasks:
 T01 (documented limits, duration feedback, engine memory/option explanations,
-incomplete-game warning, API format recovery, preview retry), T01a
-(page-level migration recovery), T01b (corrupt record skip/warning UI), T01c
-(export OOM/audio recovery), T03 (single-project overwrite), and T04 (injected
-restore-failure test and rollback UI).
+incomplete-game warning, scene-ply warning, preview retry), T01a (page-level
+migration recovery), T03 (single-project overwrite), and T04 (versioned-manifest
+detail and a dedicated missing-asset backup test).
 
 ## R7 changes recorded here
 
@@ -125,4 +124,15 @@ restore-failure test and rollback UI).
 - The global error screen (`src/app/error.tsx`) renders `AppError.message` and
   `AppError.recovery`, so migration-blocked and corrupt-record recovery text is
   visible instead of the generic reload copy.
+- `createProjectRepository(db, { onInvalidRecord })` reports skipped corrupt
+  projects. The Studio project list shows a banner with backup and re-import
+  recovery while valid projects still load.
+- Corrupt asset reads raise `ValidationError` with a re-upload or remove-track
+  recovery, and the Studio preview warning links to Project audio.
+- External API shape changes become `ValidationError` in the Chess.com and
+  Lichess adapters and in the import response guards, with the "paste the PGN
+  manually" recovery.
+- Export failures classify memory and audio encoding errors. The panel offers
+  Retry export and Retry without audio, the project snapshot is never mutated,
+  and the render result's internal state is disposed after use.
 - IndexedDB stays at version 2. No runtime dependency was added.

@@ -1,6 +1,14 @@
 import { parsePgn } from "@/features/games/pgn";
 import type { Game } from "@/features/games/types";
+import { ValidationError } from "@/lib/errors";
 import { cachedFetch, HttpError } from "@/lib/http";
+
+function unexpectedResponse(): ValidationError {
+  return new ValidationError(
+    "Lichess returned an unexpected response.",
+    "Retry once. If it persists, paste the PGN manually.",
+  );
+}
 
 export async function fetchLichessGames(
   username: string,
@@ -21,7 +29,11 @@ export async function fetchLichessGames(
     throw new HttpError("Lichess could not return the requested games.");
   }
   const pgn = await response.text();
-  return parsePgn(pgn, "lichess", username).games;
+  try {
+    return parsePgn(pgn, "lichess", username).games;
+  } catch {
+    throw unexpectedResponse();
+  }
 }
 
 export async function fetchLichessGame(gameId: string): Promise<Game> {
@@ -40,7 +52,12 @@ export async function fetchLichessGame(gameId: string): Promise<Game> {
     throw new HttpError("Lichess could not export the requested game.");
   }
   const pgn = await response.text();
-  const games = parsePgn(pgn, "lichess", gameId).games;
+  let games: Game[];
+  try {
+    games = parsePgn(pgn, "lichess", gameId).games;
+  } catch {
+    throw unexpectedResponse();
+  }
   const game = games[0];
   if (!game) {
     throw new HttpError("Lichess returned no game for that reference.", 404);

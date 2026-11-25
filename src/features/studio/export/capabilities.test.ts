@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  canRetryWithoutAudio,
   chooseOutputTarget,
+  classifyExportFailure,
   pickSupportedFormat,
   resolveSelectedFormat,
   shouldUseOpfs,
@@ -63,5 +65,28 @@ describe("export capabilities", () => {
         })),
       ),
     ).toBeUndefined();
+  });
+
+  it("classifies an out-of-memory render failure", () => {
+    const error = new RangeError("Array buffer allocation failed");
+    expect(classifyExportFailure(error, true)).toBe("memory");
+    expect(classifyExportFailure(error, false)).toBe("memory");
+  });
+
+  it("classifies an audio encoding failure only when audio is enabled", () => {
+    const error = new Error("AudioEncoder failed to encode the track");
+    expect(classifyExportFailure(error, true)).toBe("audio");
+    expect(classifyExportFailure(error, false)).toBe("other");
+    expect(canRetryWithoutAudio(error, true)).toBe(true);
+    expect(canRetryWithoutAudio(error, false)).toBe(false);
+  });
+
+  it("treats memory pressure as memory before audio", () => {
+    expect(
+      classifyExportFailure(
+        new Error("Out of memory while encoding audio"),
+        true,
+      ),
+    ).toBe("memory");
   });
 });

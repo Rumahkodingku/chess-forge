@@ -314,4 +314,64 @@ describe("exportProject", () => {
     });
     expect(project.name).not.toBe("Mutated");
   });
+
+  it("reports an out-of-memory failure and keeps the project intact", async () => {
+    const project = normalizeProject(fixture);
+    const before = structuredClone(project);
+    mocks.renderMediaOnWeb.mockRejectedValue(
+      new RangeError("Array buffer allocation failed"),
+    );
+
+    await expect(
+      exportProject({
+        project,
+        config,
+        signal: new AbortController().signal,
+        onProgress: vi.fn(),
+      }),
+    ).rejects.toMatchObject({
+      name: "ExportError",
+      stage: "storage",
+      message: expect.stringContaining("out of memory"),
+      recovery: expect.stringContaining("unchanged"),
+    });
+    expect(project).toEqual(before);
+  });
+
+  it("reports an audio encoding failure with retry-without-audio guidance", async () => {
+    mocks.renderMediaOnWeb.mockRejectedValue(
+      new Error("AudioEncoder failed to encode the track"),
+    );
+
+    await expect(
+      exportProject({
+        project: normalizeProject(fixture),
+        config,
+        signal: new AbortController().signal,
+        onProgress: vi.fn(),
+      }),
+    ).rejects.toMatchObject({
+      name: "ExportError",
+      stage: "render",
+      message: "The audio track could not be encoded.",
+      recovery: expect.stringContaining("without audio"),
+    });
+  });
+
+  it("disposes the render result after a successful export", async () => {
+    const dispose = vi.fn();
+    mocks.renderMediaOnWeb.mockResolvedValue({
+      getBlob: async () => new Blob(["video"]),
+      internalState: { [Symbol.dispose]: dispose },
+    });
+
+    await exportProject({
+      project: normalizeProject(fixture),
+      config,
+      signal: new AbortController().signal,
+      onProgress: vi.fn(),
+    });
+
+    expect(dispose).toHaveBeenCalledTimes(1);
+  });
 });

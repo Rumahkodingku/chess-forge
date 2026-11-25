@@ -1,12 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type ChessComGame,
   convertChessComGames,
+  fetchChessComGames,
   summarizeChessComGames,
 } from "@/features/games/adapters/chesscom";
 import fixture from "@/features/games/fixtures/chesscom-games.json";
+import { clearHttpCache } from "@/lib/http";
 
 describe("Chess.com adapter", () => {
+  beforeEach(() => {
+    clearHttpCache();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
   it("converts standard games and reports parse warnings", () => {
     const result = convertChessComGames(fixture as ChessComGame[]);
     expect(result.games).toHaveLength(1);
@@ -24,5 +33,20 @@ describe("Chess.com adapter", () => {
     expect(result.summaries[0]?.white.username).toBe("White");
     expect(result.summaries[0]?.rules).toBe("chess");
     expect(result.warnings[0]).toContain("chess960");
+  });
+
+  it("converts a changed Chess.com payload into a recoverable validation error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({ games: [{ url: "not-a-url", rules: "chess" }] }),
+      ),
+    );
+
+    await expect(fetchChessComGames("user", 2026, 1)).rejects.toMatchObject({
+      name: "ValidationError",
+      message: "Chess.com returned an unexpected response.",
+      recovery: expect.stringContaining("paste the PGN manually"),
+    });
   });
 });

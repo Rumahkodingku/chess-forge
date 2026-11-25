@@ -25,13 +25,17 @@ import {
 } from "@/features/storage/db";
 import { RestoreProjectDialog } from "@/features/studio/components/restore-project-dialog";
 import type { VideoProject } from "@/features/studio/scene/scene.types";
-import { toErrorMessage } from "@/lib/errors";
+import { toErrorNotice } from "@/lib/errors";
 
 type LoadState = "loading" | "ready" | "error";
 
-async function loadProjects(): Promise<VideoProject[]> {
+async function loadProjects(
+  onInvalidRecord?: (id: string | undefined) => void,
+): Promise<VideoProject[]> {
   const db = await openChessForgeDatabase();
-  const stored = await createProjectRepository(db).list();
+  const stored = await createProjectRepository(db, {
+    onInvalidRecord,
+  }).list();
   return [...stored].sort((left, right) =>
     right.updatedAt.localeCompare(left.updatedAt),
   );
@@ -41,19 +45,24 @@ export default function StudioPage() {
   const [projects, setProjects] = useState<VideoProject[]>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [error, setError] = useState<string | null>(null);
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const stored = await loadProjects();
+        const stored = await loadProjects(() =>
+          setStorageWarning(
+            "A stored project was damaged and was skipped. Export a backup, then clear site data and re-import.",
+          ),
+        );
         if (cancelled) return;
         setProjects(stored);
         setState("ready");
       } catch (loadError) {
         if (!cancelled) {
-          setError(toErrorMessage(loadError));
+          setError(toErrorNotice(loadError));
           setState("error");
         }
       }
@@ -66,10 +75,17 @@ export default function StudioPage() {
 
   async function refreshProjects() {
     try {
-      setProjects(await loadProjects());
+      setStorageWarning(null);
+      setProjects(
+        await loadProjects(() =>
+          setStorageWarning(
+            "A stored project was damaged and was skipped. Export a backup, then clear site data and re-import.",
+          ),
+        ),
+      );
       setState("ready");
     } catch (refreshError) {
-      setError(toErrorMessage(refreshError));
+      setError(toErrorNotice(refreshError));
       setState("error");
     }
   }
@@ -83,7 +99,7 @@ export default function StudioPage() {
         current.filter((project) => project.id !== projectId),
       );
     } catch (deleteError) {
-      setError(toErrorMessage(deleteError));
+      setError(toErrorNotice(deleteError));
       setState("error");
     }
   }
@@ -110,6 +126,12 @@ export default function StudioPage() {
           </div>
         }
       />
+
+      {storageWarning ? (
+        <output className="block rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-100">
+          {storageWarning}
+        </output>
+      ) : null}
 
       {state === "loading" ? (
         <div className="flex min-h-44 items-center justify-center rounded-xl border border-border/80 bg-surface-1">

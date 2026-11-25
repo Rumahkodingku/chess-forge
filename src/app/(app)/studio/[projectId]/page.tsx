@@ -66,7 +66,7 @@ import type {
 } from "@/features/studio/scene/scene.types";
 import { ApplyTemplateDialog } from "@/features/templates/components/apply-template-dialog";
 import { SaveTemplateDialog } from "@/features/templates/components/save-template-dialog";
-import { toErrorMessage } from "@/lib/errors";
+import { toErrorNotice } from "@/lib/errors";
 import { isUuid } from "@/lib/validation";
 
 const Player = dynamic(
@@ -144,7 +144,7 @@ export default function StudioProjectPage() {
         setLoadState("ready");
       } catch (error) {
         if (!cancelled) {
-          setLoadError(toErrorMessage(error));
+          setLoadError(toErrorNotice(error));
           setLoadState("error");
         }
       }
@@ -207,7 +207,7 @@ export default function StudioProjectPage() {
       } catch (error) {
         if (!cancelled) {
           setResolvedAudioAssets({});
-          setAudioWarnings([toErrorMessage(error)]);
+          setAudioWarnings([toErrorNotice(error)]);
         }
       }
     }
@@ -397,7 +397,7 @@ export default function StudioProjectPage() {
       toast.success("Project saved to this device.");
     } catch (error) {
       setSaveState("error");
-      toast.error(toErrorMessage(error));
+      toast.error(toErrorNotice(error));
     }
   }
 
@@ -423,7 +423,7 @@ export default function StudioProjectPage() {
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success("Project backup exported.");
     } catch (error) {
-      toast.error(toErrorMessage(error));
+      toast.error(toErrorNotice(error));
     } finally {
       setExportingBackup(false);
     }
@@ -758,6 +758,14 @@ export default function StudioProjectPage() {
                     <li key={warning}>{warning}</li>
                   ))}
                 </ul>
+                {audioWarnings.length ? (
+                  <a
+                    href="#project-audio"
+                    className="mt-2 inline-block text-[10px] font-medium text-amber-200 underline underline-offset-2"
+                  >
+                    Open audio editor
+                  </a>
+                ) : null}
               </div>
             ) : null}
           </CardContent>
@@ -849,7 +857,7 @@ export default function StudioProjectPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/80 bg-surface-1">
+          <Card id="project-audio" className="border-border/80 bg-surface-1">
             <CardHeader>
               <CardTitle className="text-[15px]">Project audio</CardTitle>
               <CardDescription>

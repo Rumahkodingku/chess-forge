@@ -1,4 +1,7 @@
-import { shouldUseOpfs } from "@/features/studio/export/capabilities";
+import {
+  classifyExportFailure,
+  shouldUseOpfs,
+} from "@/features/studio/export/capabilities";
 import {
   type ExportConfig,
   qualitySettings,
@@ -163,8 +166,8 @@ export async function exportProject(
     });
   }
 
+  let result: Awaited<ReturnType<typeof render>> | undefined;
   try {
-    let result: Awaited<ReturnType<typeof render>>;
     try {
       result = await render(outputTarget);
     } catch (renderError) {
@@ -219,15 +222,33 @@ export async function exportProject(
     }
     const message =
       error instanceof Error ? error.message : "The export could not render.";
-    const storageFailure = /memory|allocat|quota|storage|disk|buffer/i.test(
-      message,
-    );
+    const failureKind = classifyExportFailure(error, includeAudio);
+    if (failureKind === "memory") {
+      throw new ExportError(
+        "storage",
+        "The browser ran out of memory while rendering.",
+        "Lower the resolution, shorten the project, or retry without audio. Your project is unchanged.",
+      );
+    }
+    if (failureKind === "audio") {
+      throw new ExportError(
+        "render",
+        "The audio track could not be encoded.",
+        "Retry without audio, choose another format, or lower the audio quality. Your project is unchanged.",
+      );
+    }
+    const storageFailure = /quota|storage|disk|buffer/i.test(message);
     throw new ExportError(
       storageFailure ? "storage" : "render",
       message,
       storageFailure
-        ? "Lower the resolution, shorten the project, or choose WebM."
-        : "Retry the export, choose WebM, or lower the resolution.",
+        ? "Lower the resolution, shorten the project, or choose WebM. Your project is unchanged."
+        : "Retry the export, choose WebM, or lower the resolution. Your project is unchanged.",
     );
+  } finally {
+    const disposable = result?.internalState as
+      | { [Symbol.dispose]?: () => void }
+      | undefined;
+    disposable?.[Symbol.dispose]?.();
   }
 }

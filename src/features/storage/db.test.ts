@@ -395,4 +395,32 @@ describe("IndexedDB repositories", () => {
     await db.put("games", { id: "broken" } as never);
     await expect(repository.getById("broken")).rejects.toThrow();
   });
+
+  it("skips a corrupt project while other projects load", async () => {
+    const db = await openChessForgeDatabase();
+    const game = parseSinglePgn(PGN);
+    const project = createWalkingSkeletonProject({ game, selectedPly: 1 });
+    await createProjectRepository(db).save(project);
+    await db.put("projects", { id: "corrupt-project" } as never);
+
+    const skipped: Array<string | undefined> = [];
+    const listed = await createProjectRepository(db, {
+      onInvalidRecord: (id) => skipped.push(id),
+    }).list();
+
+    expect(listed.map((item) => item.id)).toEqual([project.id]);
+    expect(skipped).toEqual(["corrupt-project"]);
+  });
+
+  it("reports a corrupt asset with a re-upload recovery", async () => {
+    const db = await openChessForgeDatabase();
+    const repository = createAssetRepository(db);
+    await db.put("assets", { id: "corrupt-asset" } as never);
+
+    await expect(repository.getById("corrupt-asset")).rejects.toMatchObject({
+      name: "ValidationError",
+      message: "Stored asset data is invalid.",
+      recovery: expect.stringContaining("Re-upload the audio file"),
+    });
+  });
 });
