@@ -596,7 +596,9 @@ The UI must label it `Candidate Brilliant`, store `pending`, `accepted`, or `rej
 
 **Goal:** Complete error handling, performance, accessibility, backup/restore, deployment, documentation, and release validation.
 
-**Entry criteria:** Gate G10 passes.
+**Spec:** `docs/specs/R7-hardening-and-release.md`.
+
+**Entry criteria:** Gate G10 passes. Gate G11 also includes G12 for the final release.
 
 ### 12.1 Tasks
 
@@ -625,7 +627,7 @@ The UI must label it `Candidate Brilliant`, store `pending`, `accepted`, or `rej
 
 ### 12.3 Exit gate
 
-- **G11:** AC-08 and AC-09 pass and the release checklist is complete.
+- **G11:** AC-01 to AC-09 pass, G0 to G12 pass, and the release checklist is complete.
 
 ---
 
@@ -776,7 +778,7 @@ The UI must label it `Candidate Brilliant`, store `pending`, `accepted`, or `rej
 ## 17. Release Checklist
 
 - [ ] AC-01 to AC-09 pass.
-- [ ] All phase gates G0 to G11 pass.
+- [ ] All phase gates G0 to G12 pass.
 - [ ] Unit, integration, and E2E tests pass.
 - [ ] Production build passes.
 - [ ] Backup export and restore pass.
