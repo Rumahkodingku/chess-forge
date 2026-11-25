@@ -8,7 +8,8 @@
 
 ## How to read this matrix
 
-One row per PRD §12 case. Columns:
+One row per PRD §12 case plus the R7 backup and restore cases from the spec
+matrix (46 rows). Columns:
 
 - **Area** — PRD §12 group.
 - **Case** — the failure being handled.
@@ -34,7 +35,7 @@ leaves the previous valid state intact.
 | Import and game data | Invalid PGN syntax | `covered` | Candidate row marked invalid with the parser error; other candidates stay selectable. | Fix the PGN or choose another game from the list. | `src/features/games/pgn.test.ts` "keeps valid candidates when another game is invalid" |
 | Import and game data | Illegal SAN move | `covered` | `PgnImportError` names the ply and move: `Illegal SAN move "..."`. | Correct the move in the PGN and import again. | `src/features/games/pgn.test.ts` "reports an illegal SAN with ply and move details" |
 | Import and game data | Unsupported variant | `covered` | `PgnImportError` rejects the game; Chess.com chess960 games arrive as import warnings. | Use a standard chess PGN or skip the unsupported game. | `src/features/games/pgn.test.ts` "rejects an unsupported variant"; `src/features/games/adapters/chesscom.test.ts` chess960 warning |
-| Import and game data | Multiple games | `covered` | Candidate list with search, per-game selection, and a 200-game cap notice. | Select one game or search to narrow the list. | `src/features/games/pgn.test.ts` "parses multiple games and keeps each original PGN"; candidate cap in `src/features/games/candidates.ts` |
+| Import and game data | Multiple games | `covered` | Candidate list with search, per-game selection, and a 200-game cap notice. | Select one game or search to narrow the list. | `src/features/games/pgn.test.ts` "parses multiple games and keeps each original PGN" and "keeps valid candidates when another game is invalid" |
 | Import and game data | Very long game | `partial` | A 200-ply game imports and replays without freezing. No documented ply or duration limit yet. | Split or trim the PGN. The supported limit must be documented (R7-T01 gap). | `src/features/games/pgn.test.ts` "parses a 200 ply fixture without freezing" |
 | Import and game data | Missing player metadata | `covered` | Missing White/Black tags display as "Unknown"; the game still imports. | Continue with default labels; no blocking error. | Manual check of `metadataFromTags` in `src/features/games/pgn.ts` |
 | Import and game data | Incomplete game | `partial` | Result `*` imports and replays. There is no explicit "incomplete game" warning in the import review. | Import anyway and review the moves. Explicit warning is an R7-T01 gap. | `src/features/games/pgn.test.ts` multi-game fixture uses `Result "*"` |
@@ -65,7 +66,7 @@ leaves the previous valid state intact.
 | Studio and animation | Source game missing | `covered` | Project stores a game snapshot, so the studio opens and renders after the game is deleted. | Continue editing from the snapshot. | `src/features/storage/db.test.ts` "round trips a project with its game snapshot"; `src/features/studio/scene/project-normalization.test.ts` |
 | Studio and animation | Scene references invalid ply | `partial` | Normalisation corrects the FEN from the move range and drops invalid keyframes/annotations; no explicit scene warning for an out-of-range ply. | Re-normalise on load; explicit validation warning is an R7-T01 gap. | `src/features/studio/scene/project-normalization.test.ts` "rejects a move range outside the game snapshot" |
 | Studio and animation | Unsupported move/position | `covered` | Project validation rejects an invalid scene or move range on save/load. | Fix the scene source or recreate it from an analysed move. | `src/features/studio/scene/project-normalization.test.ts`; `src/features/studio/creation/generate-project.test.ts` "rejects an inverted manual range" |
-| Studio and animation | Zero/negative duration | `covered` | Scene schema and operations clamp duration to at least one frame; timeline derives safe durations. | Set a valid duration; the UI clamps the value. | `src/features/studio/rendering/timeline.test.ts` "normalises scene starts and derives project duration"; `src/features/studio/editing/project-operations.test.ts` |
+| Studio and animation | Zero/negative duration | `partial` | Scene schema and operations clamp duration to at least one frame, but the UI clamps silently and gives no feedback. | Set a valid duration. Explicit UI feedback is an R7-T01 gap. | `src/features/studio/rendering/timeline.test.ts` "normalises scene starts and derives project duration"; `src/features/studio/editing/project-operations.test.ts` |
 | Studio and animation | Audio asset unavailable | `partial` | Preview warnings list "Audio asset <id> is missing or is not an audio file."; rendering skips the track. | Re-upload the audio asset. No direct link to the audio editor from the warning (R7-T01 gap). | `src/features/studio/rendering/audio.test.ts` "schedules project audio tracks and skips missing assets" |
 | Studio and animation | Text exceeds safe area | `covered` | Preview warnings list each overlay that exceeds the safe area. | Shorten or move the text; the warning names the scene. | `src/features/studio/rendering/text-safety.test.ts` |
 | Studio and animation | Aspect ratio layout fails | `covered` | Canvas presets resize the project and re-run text-safety warnings. | Pick another aspect preset or adjust overlays. | `src/features/studio/rendering/text-safety.test.ts`; manual studio check |
@@ -77,7 +78,7 @@ leaves the previous valid state intact.
 | --- | --- | --- | --- | --- | --- |
 | Persistence and backup | IndexedDB unavailable | `covered` | `StorageUnavailableError`: "Browser storage is unavailable." Page load and the global error screen show the message. | Use a current browser with IndexedDB enabled. | Guard in `src/features/storage/db.ts`; manual browser check |
 | Persistence and backup | Quota exceeded | `covered` | `StorageQuotaError`: "Browser storage is full." | Remove unused projects or export a backup. | `toStorageError` in `src/features/storage/db.ts`; manual browser quota check |
-| Persistence and backup | Migration fails | `covered` | Upgrade errors throw `StorageMigrationError`; a blocked upgrade throws `StorageBlockedError` with "The local database upgrade is blocked by another ChessForge tab." The global error screen shows the message and recovery. | "Close other ChessForge tabs, reload this page, and try again." For a failed upgrade: "Export a backup, then clear site data and re-import." | `src/features/storage/db.test.ts` "surfaces a blocked upgrade as a recoverable error", "rejects a blocked upgrade when another tab keeps the old version open", and the v1→v2 migration test |
+| Persistence and backup | Migration fails | `partial` | Upgrade errors throw `StorageMigrationError`; a blocked upgrade throws `StorageBlockedError` with "The local database upgrade is blocked by another ChessForge tab." Page-level callers show the message only; the global error screen shows message plus recovery for uncaught errors. | "Close other ChessForge tabs, reload this page, and try again." For a failed upgrade: "Export a backup, then clear site data and re-import." Showing recovery on page-level load errors is an R7-T01a gap. | `src/features/storage/db.test.ts` "surfaces a blocked upgrade as a recoverable error", "rejects a blocked upgrade when another tab keeps the old version open", and the v1→v2 migration test |
 | Persistence and backup | Project data corrupted | `partial` | Single-record reads throw `ValidationError` with "Stored project data is invalid." List reads skip corrupt records with a console warning; no dedicated recovery panel. | "Export a backup, then clear site data before re-importing." Skip-with-warning UI is an R7-T01b gap. | `src/features/storage/db.test.ts` "rejects schema drift when reading a stored game"; no project-corruption UI test |
 | Persistence and backup | Backup unsupported version | `partial` | Import rejects with "The backup manifest is invalid or uses an unsupported version." The actual version is not shown. | Use a backup from a compatible ChessForge version. Explicit version detail is an R7-T04/T03a gap. | `src/features/storage/backup.test.ts` "rejects a file that is not a ChessForge backup"; no versioned-manifest test |
 | Persistence and backup | Backup missing asset | `partial` | Import rejects with "The backup is missing an asset file." before the write transaction starts. | Use a complete application backup. | Code path in `src/features/storage/backup.ts`; no dedicated test |
@@ -101,15 +102,17 @@ leaves the previous valid state intact.
 
 | Status | Rows |
 | --- | ---: |
-| `covered` | 31 |
-| `partial` | 14 |
+| `covered` | 29 |
+| `partial` | 17 |
 | `missing` | 0 |
+| **Total** | **46** |
 
 The matrix has no `missing` rows. Remaining `partial` rows map to R7 tasks:
-T01 (documented limits, engine memory/option explanations, incomplete-game
-warning, API format recovery, preview retry), T01b (corrupt record skip/warning
-UI), T01c (export OOM/audio recovery), T03 (single-project overwrite), and T04
-(injected restore-failure test and rollback UI).
+T01 (documented limits, duration feedback, engine memory/option explanations,
+incomplete-game warning, API format recovery, preview retry), T01a
+(page-level migration recovery), T01b (corrupt record skip/warning UI), T01c
+(export OOM/audio recovery), T03 (single-project overwrite), and T04 (injected
+restore-failure test and rollback UI).
 
 ## R7 changes recorded here
 
