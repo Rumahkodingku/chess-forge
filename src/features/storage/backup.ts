@@ -1,9 +1,23 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { z } from "zod";
 import {
+  moveAssessmentSchema,
+  positionAnalysisSchema,
+} from "@/features/analysis/types";
+import { gameSchema } from "@/features/games/types";
+import {
+  learningProgressSchema,
+  libraryNoteSchema,
+  repertoireLineSchema,
+} from "@/features/library/schemas";
+import { normalizeApplicationSettings } from "@/features/settings/types";
+import {
   type AssetRecord,
   openChessForgeDatabase,
+  toStorageError,
 } from "@/features/storage/db";
+import { normalizeProject } from "@/features/studio/scene/project-normalization";
+import { normalizeTemplate } from "@/features/templates/normalization";
 import { ValidationError } from "@/lib/errors";
 
 const BACKUP_FORMAT = "chessforge-backup";
@@ -33,6 +47,57 @@ const backupManifestSchema = z
   })
   .strict();
 
+type BackupStore = (typeof BACKUP_STORES)[number];
+
+const backupAssetMetadataSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["audio", "image"]),
+  mimeType: z.string().min(1),
+  size: z.number().int().nonnegative(),
+  hash: z.string().min(1),
+  createdAt: z.string().min(1),
+});
+
+const backupAssetSchema = backupAssetMetadataSchema.extend({
+  // Blob identity differs across browser, jsdom, and fake-indexeddb realms.
+  data: z.custom<Blob>((value) => value !== undefined && value !== null),
+});
+
+const keyValueRecordSchema = z.object({
+  key: z.string().min(1),
+  value: z.unknown(),
+});
+
+const backupStoreParsers: Record<BackupStore, (record: unknown) => unknown> = {
+  games: (record) => gameSchema.parse(record),
+  positionAnalyses: (record) => positionAnalysisSchema.parse(record),
+  moveAssessments: (record) => moveAssessmentSchema.parse(record),
+  projects: (record) => normalizeProject(record),
+  templates: (record) => {
+    const template = normalizeTemplate(record);
+    if (!template) {
+      throw new Error("The template record is invalid.");
+    }
+    return template;
+  },
+  assets: (record) => backupAssetSchema.parse(record),
+  settings: (record) => {
+    const { key, value } = keyValueRecordSchema.parse(record);
+    return { key, value: normalizeApplicationSettings(value) };
+  },
+  meta: (record) => keyValueRecordSchema.parse(record),
+  libraryNotes: (record) => libraryNoteSchema.parse(record),
+  repertoireLines: (record) => repertoireLineSchema.parse(record),
+  learningProgress: (record) => learningProgressSchema.parse(record),
+};
+
+function invalidBackupRecord(store: BackupStore): ValidationError {
+  return new ValidationError(
+    `The backup contains an invalid ${store} record.`,
+    "Use a backup created by a compatible ChessForge version.",
+  );
+}
+
 export interface BackupSummary {
   createdAt: string;
   counts: Record<string, number>;
@@ -60,6 +125,31 @@ async function blobBytes(blob: Blob): Promise<Uint8Array> {
     };
     reader.onerror = () => reject(reader.error ?? new Error("Read failed."));
     reader.readAsArrayBuffer(blob);
+  });
+}
+
+function readBackupAssets(
+  entries: Record<string, Uint8Array>,
+  records: unknown[],
+): AssetRecord[] {
+  return records.map((record) => {
+    let metadata: z.infer<typeof backupAssetMetadataSchema>;
+    try {
+      metadata = backupAssetMetadataSchema.parse(record);
+    } catch {
+      throw invalidBackupRecord("assets");
+    }
+    const bytes = entries[`assets/${metadata.id}`];
+    if (!bytes) {
+      throw new ValidationError(
+        "The backup is missing an asset file.",
+        "Use a complete application backup.",
+      );
+    }
+    return {
+      ...metadata,
+      data: new Blob([toBlobPart(bytes)], { type: metadata.mimeType }),
+    };
   });
 }
 
@@ -151,30 +241,39 @@ export async function importApplicationBackup(
     }
   }
 
-  const assets = data.assets as Array<Omit<AssetRecord, "data">>;
-  data.assets = assets.map((meta) => {
-    const bytes = entries[`assets/${meta.id}`];
-    if (!bytes) {
-      throw new ValidationError(
-        "The backup is missing an asset file.",
-        "Use a complete application backup.",
-      );
-    }
-    return {
-      ...meta,
-      data: new Blob([toBlobPart(bytes)], { type: meta.mimeType }),
-    } satisfies AssetRecord;
-  });
+  data.assets = readBackupAssets(entries, data.assets);
+
+  const records = {} as Record<BackupStore, unknown[]>;
+  for (const store of BACKUP_STORES) {
+    records[store] = data[store].map((record) => {
+      try {
+        return backupStoreParsers[store](record);
+      } catch {
+        throw invalidBackupRecord(store);
+      }
+    });
+  }
 
   const db = await openChessForgeDatabase();
   const transaction = db.transaction(BACKUP_STORES, "readwrite");
-  for (const store of BACKUP_STORES) {
-    await transaction.objectStore(store).clear();
-    for (const record of data[store]) {
-      await transaction.objectStore(store).put(record as never);
+  try {
+    for (const store of BACKUP_STORES) {
+      await transaction.objectStore(store).clear();
+      for (const record of records[store]) {
+        await transaction.objectStore(store).put(record as never);
+      }
     }
+    await transaction.done;
+  } catch (error) {
+    // Aborting rejects transaction.done; handle it before the rollback.
+    transaction.done.catch(() => {});
+    try {
+      transaction.abort();
+    } catch {
+      // A failed transaction is already aborting.
+    }
+    throw toStorageError(error);
   }
-  await transaction.done;
 
   return { createdAt: manifest.createdAt, counts: manifest.counts };
 }
