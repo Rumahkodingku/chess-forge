@@ -303,5 +303,34 @@ describe("project backup", () => {
         inspectProjectBackup(backupFromEntries(entries)),
       ).rejects.toThrow("checksum");
     });
+
+    it("rejects a semantically invalid project before writing", async () => {
+      const { project, asset } = await saveProjectWithAudio();
+      const entries = await backupEntries(
+        await exportProjectBackup(project.id),
+      );
+      const exported = JSON.parse(strFromU8(entries["project.json"])) as {
+        scenes: Array<{ moveRange?: { fromPly: number; toPly: number } }>;
+      };
+      exported.scenes[0].moveRange = { fromPly: 1, toPly: 999 };
+      entries["project.json"] = strToU8(JSON.stringify(exported));
+      const broken = backupFromEntries(entries);
+
+      await expect(inspectProjectBackup(broken)).rejects.toThrow(
+        "inconsistent",
+      );
+      await expect(restoreProjectBackup(broken, "overwrite")).rejects.toThrow(
+        "inconsistent",
+      );
+
+      const db = await openChessForgeDatabase();
+      const projects = await createProjectRepository(db).list();
+      expect(projects).toHaveLength(1);
+      expect(projects[0]?.scenes[0]?.moveRange).toEqual({
+        fromPly: 1,
+        toPly: 1,
+      });
+      expect(await createAssetRepository(db).getById(asset.id)).toBeDefined();
+    });
   });
 });

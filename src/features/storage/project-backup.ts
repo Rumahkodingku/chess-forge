@@ -9,6 +9,7 @@ import {
   toStorageError,
 } from "@/features/storage/db";
 import { hashBlob } from "@/features/studio/audio/audio-upload";
+import { normalizeProject } from "@/features/studio/scene/project-normalization";
 import {
   type VideoProject,
   videoProjectSchema,
@@ -175,6 +176,15 @@ async function readProjectBackup(file: Blob): Promise<ProjectBackupContents> {
     throw new ValidationError(
       "The project data in the backup is invalid.",
       "Export a fresh project backup from ChessForge and try again.",
+    );
+  }
+
+  try {
+    project = normalizeProject(project);
+  } catch {
+    throw new ValidationError(
+      "The project data in the backup is inconsistent.",
+      "Export the project again from ChessForge, then retry the restore.",
     );
   }
 

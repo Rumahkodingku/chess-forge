@@ -113,6 +113,7 @@ export function RestoreProjectDialog({
             aria-label="Choose a project backup file"
             onChange={(event) => {
               const selected = event.target.files?.[0];
+              event.target.value = "";
               if (selected) void choose(selected);
             }}
           />
