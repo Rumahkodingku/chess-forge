@@ -1,6 +1,12 @@
 "use client";
 
-import { ArrowRight, Clapperboard, Loader2, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  Clapperboard,
+  Loader2,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/layout/empty-state";
@@ -17,28 +23,33 @@ import {
   createProjectRepository,
   openChessForgeDatabase,
 } from "@/features/storage/db";
+import { RestoreProjectDialog } from "@/features/studio/components/restore-project-dialog";
 import type { VideoProject } from "@/features/studio/scene/scene.types";
 import { toErrorMessage } from "@/lib/errors";
 
 type LoadState = "loading" | "ready" | "error";
 
+async function loadProjects(): Promise<VideoProject[]> {
+  const db = await openChessForgeDatabase();
+  const stored = await createProjectRepository(db).list();
+  return [...stored].sort((left, right) =>
+    right.updatedAt.localeCompare(left.updatedAt),
+  );
+}
+
 export default function StudioPage() {
   const [projects, setProjects] = useState<VideoProject[]>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [error, setError] = useState<string | null>(null);
+  const [restoreOpen, setRestoreOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const db = await openChessForgeDatabase();
-        const stored = await createProjectRepository(db).list();
+        const stored = await loadProjects();
         if (cancelled) return;
-        setProjects(
-          [...stored].sort((left, right) =>
-            right.updatedAt.localeCompare(left.updatedAt),
-          ),
-        );
+        setProjects(stored);
         setState("ready");
       } catch (loadError) {
         if (!cancelled) {
@@ -52,6 +63,16 @@ export default function StudioPage() {
       cancelled = true;
     };
   }, []);
+
+  async function refreshProjects() {
+    try {
+      setProjects(await loadProjects());
+      setState("ready");
+    } catch (refreshError) {
+      setError(toErrorMessage(refreshError));
+      setState("error");
+    }
+  }
 
   async function deleteProject(projectId: string) {
     if (!window.confirm("Delete this project? This cannot be undone.")) return;
@@ -73,9 +94,20 @@ export default function StudioPage() {
         title="Studio"
         description="Create templated projects, edit scenes and timeline, and preview the full sequence with deterministic board animation, camera, text, effects, and audio."
         actions={
-          <Button asChild className="h-10 px-4">
-            <Link href="/analysis">Start from analysis</Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 border-border/80 bg-transparent px-4"
+              onClick={() => setRestoreOpen(true)}
+            >
+              <Upload aria-hidden className="size-4" />
+              Import project backup
+            </Button>
+            <Button asChild className="h-10 px-4">
+              <Link href="/analysis">Start from analysis</Link>
+            </Button>
+          </div>
         }
       />
 
@@ -163,6 +195,12 @@ export default function StudioPage() {
           ))}
         </div>
       ) : null}
+
+      <RestoreProjectDialog
+        open={restoreOpen}
+        onOpenChange={setRestoreOpen}
+        onRestored={() => void refreshProjects()}
+      />
     </div>
   );
 }
