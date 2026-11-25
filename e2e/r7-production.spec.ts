@@ -92,6 +92,7 @@ test.describe("R7 release production", () => {
     await page.getByRole("button", { name: "3. Bb5" }).click();
     await expect(page.getByText("Evaluation before")).toBeVisible();
     await expect(page.getByText("Evaluation after")).toBeVisible();
+    await expect(page.getByText("Confidence")).toBeVisible();
 
     await page.getByRole("button", { name: "Create 3-second scene" }).click();
     await page.waitForURL(/\/studio\/[0-9a-f-]{36}$/);
@@ -110,8 +111,21 @@ test.describe("R7 release production", () => {
       .click();
     await expect(applyDialog).toBeHidden();
     await page.getByLabel("Text move-label").first().fill("Production move");
+    await page.getByRole("button", { name: "Save as template" }).click();
+    const saveDialog = page.getByRole("dialog", { name: "Save as template" });
+    await saveDialog
+      .getByLabel("Name", { exact: true })
+      .fill("Production template");
+    await saveDialog.getByRole("button", { name: "Save template" }).click();
+    await expect(saveDialog).toBeHidden();
     await page.getByRole("button", { name: "Save project" }).click();
     await expect(page.getByText("Autosaved to IndexedDB.")).toBeVisible();
+
+    const projectUrl = page.url();
+    await page.goto("/templates");
+    await expect(page.getByText("Production template").first()).toBeVisible();
+    await page.goto(projectUrl);
+    await expect(page.getByText("Project details")).toBeVisible();
 
     await page.reload();
     await expect(page.getByText("Project details")).toBeVisible({
@@ -165,6 +179,20 @@ test.describe("R7 release production", () => {
     await expect(page.getByRole("link", { name: "Open" })).toHaveCount(2, {
       timeout: 30_000,
     });
+    const hrefs = await page
+      .getByRole("link", { name: "Open" })
+      .evaluateAll((links) =>
+        links.map((link) => link.getAttribute("href") ?? ""),
+      );
+    expect(new Set(hrefs).size).toBe(2);
+    const originalPath = new URL(projectUrl).pathname;
+    const copyPath = hrefs.find((href) => href !== originalPath);
+    expect(copyPath).toBeTruthy();
+    if (!copyPath) throw new Error("The restored copy was not listed.");
+    await page.goto(copyPath);
+    await expect(page.getByLabel("Text move-label").first()).toHaveValue(
+      "Production move",
+    );
 
     expect(
       externalRequests.every((url) =>

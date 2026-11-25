@@ -20,7 +20,7 @@ await cp(`${root}/.next/static`, `${standalone}/.next/static`, {
   recursive: true,
 });
 
-process.env.PORT = process.env.PORT ?? "3100";
-process.env.HOSTNAME = process.env.HOSTNAME ?? "127.0.0.1";
+process.env.PORT = "3100";
+process.env.HOSTNAME = "127.0.0.1";
 
 await import(pathToFileURL(server).href);

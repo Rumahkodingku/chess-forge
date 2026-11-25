@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { strToU8, zipSync } from "fflate";
+import { projectSlug } from "../src/features/studio/file-name";
 
 const R1_PGN = readFileSync(
   "src/features/games/fixtures/r1-walking-skeleton.pgn",
@@ -140,6 +141,31 @@ async function exportVideo(page: Page, filePath: string): Promise<VideoProbe> {
   return probe(filePath);
 }
 
+const SCENE_TWO = /02 move/;
+
+async function editSceneTwoText(page: Page, value: string) {
+  await page.getByRole("button", { name: SCENE_TWO }).click();
+  await page.getByLabel("Text move-label").first().fill(value);
+  await page.getByRole("button", { name: "Save project" }).click();
+  await expect(page.getByText("Autosaved to IndexedDB.")).toBeVisible();
+}
+
+async function expectSceneTwoText(page: Page, value: string) {
+  await expect(page.getByText("Project details")).toBeVisible({
+    timeout: 30_000,
+  });
+  await page.getByRole("button", { name: SCENE_TWO }).click();
+  await expect(page.getByLabel("Text move-label").first()).toHaveValue(value);
+}
+
+async function openProjectLinks(page: Page): Promise<string[]> {
+  return page
+    .getByRole("link", { name: "Open" })
+    .evaluateAll((links) =>
+      links.map((link) => link.getAttribute("href") ?? ""),
+    );
+}
+
 test.describe("R7 release scenarios", () => {
   test.setTimeout(600_000);
   test.use({ viewport: { width: 1440, height: 1000 } });
@@ -147,7 +173,6 @@ test.describe("R7 release scenarios", () => {
   test("runs the seven PRD scenarios from import to project restore", async ({
     page,
   }, testInfo) => {
-    const projectUrls: string[] = [];
     await setEngineDepth(page, 6);
 
     await test.step("1. import and replay", async () => {
@@ -191,7 +216,6 @@ test.describe("R7 release scenarios", () => {
     await test.step("3. create a video from the selected moment", async () => {
       await page.getByRole("button", { name: "Create 3-second scene" }).click();
       await page.waitForURL(/\/studio\/[0-9a-f-]{36}$/);
-      projectUrls.push(page.url());
       await expect(page.getByText("Project details")).toBeVisible({
         timeout: 30_000,
       });
@@ -273,6 +297,7 @@ test.describe("R7 release scenarios", () => {
     });
 
     await test.step("7. restore the project from its backup", async () => {
+      const originalPath = new URL(page.url()).pathname;
       const backupPath = testInfo.outputPath("release-project.chessforge");
       const downloadPromise = page.waitForEvent("download");
       await page.getByRole("button", { name: "Export project backup" }).click();
@@ -298,11 +323,15 @@ test.describe("R7 release scenarios", () => {
       await expect(page.getByRole("link", { name: "Open" })).toHaveCount(2, {
         timeout: 30_000,
       });
-      const hrefs = await page
-        .getByRole("link", { name: "Open" })
-        .evaluateAll((links) => links.map((link) => link.getAttribute("href")));
+      const hrefs = await openProjectLinks(page);
       expect(new Set(hrefs).size).toBe(2);
-      expect(projectUrls[0]).toContain("/studio/");
+      const copyPath = hrefs.find((href) => href !== originalPath);
+      expect(copyPath).toBeTruthy();
+      if (!copyPath) throw new Error("The restored copy was not listed.");
+      await page.goto(copyPath);
+      await expect(page.getByLabel("Text move-label").first()).toHaveValue(
+        "Release move",
+      );
     });
   });
 
@@ -338,7 +367,6 @@ test.describe("R7 release scenarios", () => {
     page.once("dialog", (dialog) => dialog.accept());
     const reloadPromise = page.waitForEvent("load");
     await page.getByLabel("Import ChessForge backup").setInputFiles(backupPath);
-    await expect(page.getByText(/Backup restored from/)).toBeVisible();
     await reloadPromise;
 
     await page.goto("/dashboard");
@@ -381,21 +409,58 @@ test.describe("R7 release scenarios", () => {
     );
   });
 
+  test("restores a project into a clean workspace", async ({
+    page,
+  }, testInfo) => {
+    await seedProject(page, PROJECT_FIXTURE);
+    await page.goto(`/studio/${PROJECT_FIXTURE.id}`);
+    await editSceneTwoText(page, "Restore scene text");
+
+    const backupPath = testInfo.outputPath("r7-clean-restore.chessforge");
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Export project backup" }).click();
+    const download = await downloadPromise;
+    await download.saveAs(backupPath);
+
+    await page.goto("/studio");
+    page.once("dialog", (dialog) => dialog.accept());
+    await page
+      .getByRole("button", { name: `Delete ${PROJECT_FIXTURE.name}` })
+      .click();
+    await expect(page.getByText("No projects yet")).toBeVisible();
+
+    await page.getByRole("button", { name: "Import project backup" }).click();
+    const dialog = page.getByRole("dialog", {
+      name: "Import project backup",
+    });
+    await dialog
+      .getByLabel("Choose a project backup file")
+      .setInputFiles(backupPath);
+    await expect(dialog.getByText(/not in this browser yet/)).toBeVisible();
+    await dialog.getByRole("button", { name: "Restore project" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole("link", { name: "Open" })).toHaveCount(1, {
+      timeout: 30_000,
+    });
+
+    await page.goto(`/studio/${PROJECT_FIXTURE.id}`);
+    await expectSceneTwoText(page, "Restore scene text");
+  });
+
   test("restores a project as a copy and overwrites only after confirmation", async ({
     page,
   }, testInfo) => {
     await seedProject(page, PROJECT_FIXTURE);
     await page.goto(`/studio/${PROJECT_FIXTURE.id}`);
-    await expect(
-      page.getByRole("heading", { name: PROJECT_FIXTURE.name, level: 1 }),
-    ).toBeVisible({ timeout: 30_000 });
+    await editSceneTwoText(page, "Backup scene text");
 
+    const originalPath = `/studio/${PROJECT_FIXTURE.id}`;
     const backupPath = testInfo.outputPath("r7-project.chessforge");
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("button", { name: "Export project backup" }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toBe(
-      `${PROJECT_FIXTURE.name.toLowerCase().replaceAll(" ", "-")}.chessforge`,
+      `${projectSlug(PROJECT_FIXTURE.name)}.chessforge`,
     );
     await download.saveAs(backupPath);
 
@@ -415,11 +480,18 @@ test.describe("R7 release scenarios", () => {
     await expect(page.getByRole("link", { name: "Open" })).toHaveCount(2, {
       timeout: 30_000,
     });
-    const hrefs = await page
-      .getByRole("link", { name: "Open" })
-      .evaluateAll((links) => links.map((link) => link.getAttribute("href")));
+    const hrefs = await openProjectLinks(page);
     expect(new Set(hrefs).size).toBe(2);
+    const copyPath = hrefs.find((href) => href !== originalPath);
+    expect(copyPath).toBeTruthy();
+    if (!copyPath) throw new Error("The restored copy was not listed.");
+    await page.goto(copyPath);
+    await expectSceneTwoText(page, "Backup scene text");
 
+    await page.goto(originalPath);
+    await editSceneTwoText(page, "Local scene text");
+
+    await page.goto("/studio");
     await page.getByRole("button", { name: "Import project backup" }).click();
     await input.setInputFiles(backupPath);
     await expect(
@@ -431,7 +503,17 @@ test.describe("R7 release scenarios", () => {
     await expect(
       page.getByText("Project restored and overwritten."),
     ).toHaveCount(0);
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toBeHidden();
+    await page.goto(originalPath);
+    await expectSceneTwoText(page, "Local scene text");
 
+    await page.goto("/studio");
+    await page.getByRole("button", { name: "Import project backup" }).click();
+    await input.setInputFiles(backupPath);
+    await expect(
+      dialog.getByText(/already exists in this browser/),
+    ).toBeVisible();
     page.once("dialog", (confirm) => confirm.accept());
     await dialog.getByRole("button", { name: "Overwrite" }).click();
     await expect(
@@ -439,5 +521,7 @@ test.describe("R7 release scenarios", () => {
     ).toBeVisible();
     await expect(dialog).toBeHidden();
     await expect(page.getByRole("link", { name: "Open" })).toHaveCount(2);
+    await page.goto(originalPath);
+    await expectSceneTwoText(page, "Backup scene text");
   });
 });
