@@ -344,7 +344,8 @@ export default function AnalysisGamePage() {
       if (
         target?.tagName === "INPUT" ||
         target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable
+        target?.isContentEditable ||
+        target?.closest('[data-slot="dialog-content"]')
       ) {
         return;
       }

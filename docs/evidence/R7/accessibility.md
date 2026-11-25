@@ -23,12 +23,12 @@ Command:
 npx playwright test e2e/r7-accessibility.spec.ts
 ```
 
-Result: 4 passed. A repeated run under dev-server load took 41 s; all four tests still passed.
+Result: 4 passed. Runs took 10 s to 41 s with a warm dev server, and 2.5 min from a cold dev-server compile; all four tests passed each time.
 
 | Test | What it proves |
 | --- | --- |
 | Analysis replay is keyboard operable and announces the position | ArrowLeft/ArrowRight/Home/End change the board; First/Previous/Next/Last have accessible names; the selected move gets `aria-current`; the new position is announced through a polite status region; focused controls match `:focus-visible` with an outline or ring |
-| The create-video dialog traps and restores keyboard focus | Enter opens the modal; focus starts inside; twelve Tab presses stay inside; Escape closes it; focus returns to the opening button |
+| The create-video dialog traps and restores keyboard focus | Enter opens the modal; focus starts inside; twelve Tab presses stay inside; ArrowRight and End do not change the board behind the modal; Escape closes it; focus returns to the opening button |
 | Studio timeline and export controls are keyboard operable | Play from start and Pause work from the keyboard; the preview and timeline sliders seek with Home/ArrowRight; the scene selection, duration edit, and scene reorder work without a mouse; text, annotation, and audio tracks expose accessible descriptions; export format, file name, resolution, and export button are named; the apply-template dialog traps and restores focus |
 | Reduced motion keeps the workspace usable and still | `prefers-reduced-motion: reduce` matches; CSS transition duration is at most 0.01 ms; the timeline remains visible with no horizontal overflow at 390 px |
 
@@ -38,11 +38,12 @@ Regression runs executed on the same change:
 npx playwright test e2e/r2-walking-skeleton.spec.ts e2e/r5-studio.spec.ts e2e/r8-library.spec.ts
 npx playwright test e2e/r6-export.spec.ts
 npm test
+npx vitest run src/components/ui/progress.test.tsx
 npm run typecheck
 npx biome check <changed-files>
 ```
 
-Results: 14 E2E passed, 3 export E2E passed, 343 unit/integration tests passed, typecheck clean, Biome clean.
+Results: 14 E2E passed, 3 export E2E passed, 344 unit/integration tests passed, typecheck clean, Biome clean.
 
 ## Keyboard-only walkthrough
 
@@ -52,7 +53,7 @@ The walkthrough used Tab, Shift+Tab, Enter, Space, Escape, arrows, Home, and End
 | --- | --- | --- |
 | Analysis replay | Tab to Next move, press Enter, then press Right/End/Home | PASS: board label, selected move button, and status text update |
 | Analysis move selection | Tab to a move button and press Enter | PASS: move detail and board follow the selection |
-| Analysis dialog | Tab to Create video, press Enter, Tab through the form, press Escape | PASS: focus stays inside, then returns to Create video |
+| Analysis dialog | Tab to Create video, press Enter, Tab through the form, press ArrowRight/End, press Escape | PASS: focus stays inside, the board behind the modal does not move, then focus returns to Create video |
 | Studio playback | Tab to Play from start, press Enter; Tab to Pause, press Enter | PASS: frame advances, then stops within two frames |
 | Studio seek | Tab to Seek video and Timeline frame, press Home/ArrowRight | PASS: preview and timeline frame counters update |
 | Studio scene select | Tab to `02 move`, press Enter | PASS: scene becomes current and the inspector shows that scene |
@@ -72,6 +73,8 @@ Chromium accessibility-tree smoke check on the Analysis route listed named contr
 - move buttons such as `1. e4`, `1... e5`, `3. Bb5`
 
 The Studio timeline exposes `01 intro` through `05 outro`, `Scene N duration frames`, `Move scene N up/down`, and `Timeline frame`. The export panel exposes `Export video`, `Cancel`, `Export aspect ratio`, `Resolution`, `Quality`, `File name`, and the format radio group labelled `Format`.
+
+The shared progress bar forwards its value to Radix, so it exposes `aria-valuemin="0"`, `aria-valuemax="100"`, and `aria-valuenow` on the `progressbar` role. This is covered by `src/components/ui/progress.test.tsx`; the export bar is named `Export progress`.
 
 ## Contrast samples
 
@@ -137,3 +140,5 @@ A human screen-reader spot-check remains recommended for the G11 reviewer before
 | `src/components/ui/dialog.tsx` | Restores focus to the element that opened a controlled dialog, because Radix only restores to a `DialogTrigger` and this app opens dialogs from state |
 | `src/features/studio/components/timeline-panel.tsx` | Timeline tracks expose named text alternatives |
 | `src/features/studio/components/export-panel.tsx` | Export progress bar has the accessible name `Export progress` |
+| `src/components/ui/progress.tsx` | Forwards `value` to Radix so the progressbar exposes `aria-valuenow` |
+| `src/components/ui/progress.test.tsx` | Focused assertion for the progressbar value, min, and max |

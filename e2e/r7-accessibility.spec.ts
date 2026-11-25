@@ -147,6 +147,12 @@ test.describe("R7 accessibility", () => {
       expect(inside, "Tab must stay inside the modal dialog").toBe(true);
     }
 
+    const board = page.locator('[role="img"][aria-label^="Position:"]');
+    const boardWhileOpen = await board.getAttribute("aria-label");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("End");
+    await expect(board).toHaveAttribute("aria-label", boardWhileOpen ?? "");
+
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(trigger).toBeFocused();
