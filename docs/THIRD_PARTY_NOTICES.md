@@ -85,7 +85,7 @@ Remotion packages are used under the Remotion Licence. The project is a single-u
 
 ### Mediabunny
 
-Mediabunny 1.66.0 is distributed under MPL-2.0. ChessForge uses the library unmodified for media muxing and output validation. The source is available at https://github.com/Vanilagy/mediabunny. MPL-2.0 is a file-level copyleft licence; keep this notice and the package licence with the distributed build.
+Mediabunny 1.66.0 is distributed under MPL-2.0. ChessForge uses the package unmodified for container muxing and output validation. The export path takes H.264/AAC/VP8/VP9/Opus encoding from the browser's WebCodecs implementation; Mediabunny's own codec helpers are part of the same MPL-2.0 package. No separate encoder binary or codec package is installed for ChessForge. Mediabunny's only declared runtime dependencies are the type packages `@types/dom-mediacapture-transform` and `@types/dom-webcodecs`. If a future version adds a separate encoder package, add that package and its licence to this inventory before release. The source is available at https://github.com/Vanilagy/mediabunny. Keep this notice and the package licence with the distributed build.
 
 ## No account or cloud data
 

@@ -47,6 +47,8 @@ Expected response shape:
 
 The `timestamp` value changes per request.
 
+Stop the foreground server with `Ctrl+C` before starting the named container on the same port.
+
 Check the container health status and logs:
 
 ```bash
@@ -93,7 +95,7 @@ The repository contains a Dockerfile, so Coolify can build it directly from Git.
 6. Set the healthcheck to HTTP `GET /api/health` on port `3000`, expecting status `200`.
 7. Add the public domain and enable the Coolify-managed TLS certificate.
 8. Enable HTTPS redirect after the certificate is issued.
-9. Enable HTTP basic auth at the proxy for the application. If the installed Coolify version does not expose a basic-auth setting for applications, add a reverse-proxy middleware as shown in section 5.
+9. Enable HTTP basic auth at the proxy. If the installed Coolify version exposes a proxy-auth setting or a Traefik middleware for the application, use it. If it does not, put nginx in front of Coolify as shown in section 5. The application does not implement auth.
 10. Deploy and watch the build and runtime logs.
 
 Verify from outside the host:
@@ -116,7 +118,7 @@ Route Handler rate limits use an in-memory bucket per server process. Restarting
 
 ## 5. Basic auth at the reverse proxy
 
-Basic auth is not implemented in application code. Terminate it at the proxy.
+Basic auth is not implemented in application code. Terminate it at the proxy. The nginx example below is one option for a VPS or an nginx layer in front of Coolify. A Coolify installation that terminates with Traefik should use an equivalent Traefik basic-auth middleware instead. In both cases, route `/api/health` around the auth middleware so the healthcheck stays reachable.
 
 Generate a password file interactively. The password is not written to the repository or shell history:
 

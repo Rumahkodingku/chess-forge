@@ -18,7 +18,7 @@ The server stores no project data. A server restart or redeploy cannot recover b
 
 ## Storage unavailable
 
-**Message:** `Browser storage is unavailable. Use a current browser with IndexedDB enabled.`
+**Visible text:** `Browser storage is unavailable. Use a current browser with IndexedDB enabled.`
 
 **Cause:** IndexedDB cannot open. Common reasons are a private window, a browser policy that blocks site data, an extension that blocks storage, or an unsupported browser.
 
@@ -34,7 +34,7 @@ If the database exists but cannot open, do not clear it. The data may still be r
 
 ## Storage quota exceeded
 
-**Message:** `Browser storage is full. Remove unused projects or export a backup.`
+**Visible text:** `Browser storage is full. Remove unused projects or export a backup.`
 
 **Cause:** The origin reached the browser storage quota. Large audio files and long projects consume the most space.
 
@@ -52,7 +52,7 @@ Media limits are 50 MB or 10 minutes per audio file and 250 MB per project. A pr
 
 ## Database upgrade blocked
 
-**Message:** `The local database upgrade is blocked by another ChessForge tab. Close other ChessForge tabs, reload this page, and try again.`
+**Visible text:** `The local database upgrade is blocked by another ChessForge tab. Close other ChessForge tabs, reload this page, and try again.`
 
 **Cause:** Another tab or window still holds the previous IndexedDB version open, so the v1 → v2 upgrade cannot start.
 
@@ -67,7 +67,7 @@ Do not open several tabs while an upgrade is pending. Do not delete the database
 
 ## Database upgrade failed
 
-**Message:** `The local database could not be upgraded. Export a backup, then clear site data and re-import.`
+**Visible text:** `The local database could not be upgraded. Export a backup, then clear site data and re-import.`
 
 **Cause:** The upgrade transaction failed. Possible reasons are a full disk, a browser storage fault, or a damaged database.
 
@@ -84,7 +84,7 @@ Clearing site data removes the only local copy of the data. Use it only after a 
 
 ## Corrupt project or asset
 
-**Message:** `A stored project was damaged and was skipped. Export a backup, then clear site data and re-import.`
+**Visible text:** `A stored project was damaged and was skipped. Export a backup, then clear site data and re-import.`
 
 **Cause:** One IndexedDB project record does not match the project schema. Valid projects still load.
 
@@ -102,7 +102,15 @@ Do not edit IndexedDB records by hand unless you accept data loss and can restor
 
 ## Backup uses an unsupported version
 
-**Message:** `The backup manifest is invalid or uses an unsupported version. Use a backup created by a compatible ChessForge version.`
+**Visible messages:**
+
+- Full application import: `The backup manifest is invalid or uses an unsupported version.`
+- Project import: `The project backup manifest is invalid or uses an unsupported version.`
+
+**Recovery text:**
+
+- Full application import: `Use a backup created by a compatible ChessForge version.`
+- Project import: `Use a project backup created by a compatible ChessForge version.`
 
 **Cause:** The archive is not a supported backup, uses a newer format, or was opened in the wrong import screen.
 
@@ -138,6 +146,11 @@ Do not rename a project archive to `.zip` and expect the full import to accept i
 
 **Cause:** The ZIP does not contain a referenced `assets/<asset-id>` entry, or the file was changed after export.
 
+**Integrity checks:**
+
+- Full application import requires a file for every asset record in `data.json`. It does not compare the file bytes against the stored hash.
+- Project import requires a file for every project asset and checks that its bytes match the recorded hash. A changed file is rejected with the checksum message.
+
 **Recovery:**
 
 1. Verify the archive contents:
@@ -149,9 +162,9 @@ Do not rename a project archive to `.zip` and expect the full import to accept i
 2. Use a complete backup exported by ChessForge. Do not remove or replace files inside the archive.
 3. For a project, open the project, re-upload the missing audio, and export a fresh project backup.
 4. For the full application backup, export a fresh backup from a working browser profile.
-5. Retry the import. Both import paths validate assets before writing, so a failed import leaves the current data intact.
+5. Retry the import. Both paths validate the archive before writing. The full path checks record schemas and asset presence; the project path also checks asset hashes. A failed import leaves the current data intact.
 
-Do not edit `manifest.json` or `data.json` to bypass the check. The hash and file checks protect the project from silent corruption.
+File presence protects the full backup from an incomplete archive. Hash and file checks protect a project backup from silent corruption.
 
 ## Stockfish fails to load or respond
 
@@ -202,7 +215,7 @@ MP4 H.264/AAC depends on the browser and platform codec set. Chromium builds use
 
 ## Export runs out of memory
 
-**Message:** `The browser ran out of memory while rendering.` The panel shows **Retry export** and, for an audio failure, **Retry without audio**.
+**Visible text:** `The browser ran out of memory while rendering. Lower the resolution, shorten the project, or retry without audio. Your project is unchanged.` The panel shows **Retry export** and, for an audio failure, **Retry without audio**.
 
 **Cause:** A long or high-resolution render exceeded the tab memory budget.
 

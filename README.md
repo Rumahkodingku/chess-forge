@@ -6,9 +6,9 @@ The application has no accounts, no cloud project storage, and no server-side us
 
 ## Status
 
-Feature-complete through R8 (Chess Library). R7 release hardening covers the error matrix, full and single-project backup and restore, performance and accessibility checks, deployment documentation, and troubleshooting.
+Feature-complete through R8 (Chess Library). R7 release hardening covers full and single-project backup and restore, performance and accessibility checks, deployment documentation, and troubleshooting.
 
-The seven-scenario release E2E suite and the Gate G11 evidence record are the remaining release steps. See `docs/ROADMAP.md` and `docs/specs/R7-hardening-and-release.md`.
+Release work remains. `docs/evidence/R7/error-matrix.md` still records 11 `partial` rows. The seven-scenario release E2E suite and the Gate G11 evidence record are also pending. See `docs/ROADMAP.md` and `docs/specs/R7-hardening-and-release.md`.
 
 ## Requirements
 
