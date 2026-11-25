@@ -412,6 +412,18 @@ describe("IndexedDB repositories", () => {
     expect(skipped).toEqual(["corrupt-project"]);
   });
 
+  it("reports a corrupt project read with the skipped-project recovery", async () => {
+    const db = await openChessForgeDatabase();
+    const repository = createProjectRepository(db);
+    await db.put("projects", { id: "bad" } as never);
+
+    await expect(repository.getById("bad")).rejects.toMatchObject({
+      name: "ValidationError",
+      message: "Stored project data is invalid.",
+      recovery: expect.stringContaining("Export a backup"),
+    });
+  });
+
   it("reports a corrupt asset with a re-upload recovery", async () => {
     const db = await openChessForgeDatabase();
     const repository = createAssetRepository(db);

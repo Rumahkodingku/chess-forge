@@ -61,8 +61,8 @@ export async function fetchChessComArchives(
   if (!response.ok) {
     throw new HttpError("Chess.com could not return the game archives.");
   }
-  const json: unknown = await response.json();
   try {
+    const json: unknown = await response.json();
     return archivesResponseSchema.parse(json).archives;
   } catch {
     throw unexpectedResponse();
@@ -85,8 +85,8 @@ export async function fetchChessComGames(
   if (!response.ok) {
     throw new HttpError("Chess.com could not return the monthly games.");
   }
-  const json: unknown = await response.json();
   try {
+    const json: unknown = await response.json();
     return gamesResponseSchema.parse(json).games;
   } catch {
     throw unexpectedResponse();

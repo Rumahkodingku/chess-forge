@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type ChessComGame,
   convertChessComGames,
+  fetchChessComArchives,
   fetchChessComGames,
   summarizeChessComGames,
 } from "@/features/games/adapters/chesscom";
@@ -41,6 +42,32 @@ describe("Chess.com adapter", () => {
       vi.fn(async () =>
         Response.json({ games: [{ url: "not-a-url", rules: "chess" }] }),
       ),
+    );
+
+    await expect(fetchChessComGames("user", 2026, 1)).rejects.toMatchObject({
+      name: "ValidationError",
+      message: "Chess.com returned an unexpected response.",
+      recovery: expect.stringContaining("paste the PGN manually"),
+    });
+  });
+
+  it("converts a 200 HTML archives response into a recoverable validation error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("<html>temporarily unavailable</html>")),
+    );
+
+    await expect(fetchChessComArchives("user")).rejects.toMatchObject({
+      name: "ValidationError",
+      message: "Chess.com returned an unexpected response.",
+      recovery: expect.stringContaining("paste the PGN manually"),
+    });
+  });
+
+  it("converts a 200 HTML games response into a recoverable validation error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("<html>temporarily unavailable</html>")),
     );
 
     await expect(fetchChessComGames("user", 2026, 1)).rejects.toMatchObject({
