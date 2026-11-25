@@ -6,37 +6,50 @@ ChessForge is a local-first, single-user application. This file records the thir
 
 | Package                | Version             | Licence          | Source                                      |
 | ---------------------- | ------------------- | ---------------- | ------------------------------------------- |
-| Next.js                | 16.4.6              | MIT              | https://github.com/vercel/next.js           |
-| React                  | 19.3.0              | MIT              | https://github.com/facebook/react           |
-| React DOM              | 19.3.0              | MIT              | https://github.com/facebook/react           |
-| Tailwind CSS           | 4.3.3               | MIT              | https://github.com/tailwindlabs/tailwindcss |
-| shadcn/ui              | registry components | MIT              | https://github.com/shadcn-ui/ui             |
-| cn                     | 0.5.2               | MIT              | https://github.com/shadcn-ui/cn             |
-| Radix UI               | installed packages  | MIT              | https://github.com/radix-ui/primitives      |
-| lucide-react           | 1.77.0              | ISC              | https://github.com/lucide-icons/lucide      |
-| Zustand                | 5.1.0               | MIT              | https://github.com/pmndrs/zustand           |
-| Zod                    | 4.6.7               | MIT              | https://github.com/colinhacks/zod           |
-| idb                    | 8.0.4               | ISC              | https://github.com/jakearchibald/idb        |
-| chess.js               | 1.4.0               | BSD-2-Clause     | https://github.com/jhlywa/chess.js          |
-| chessground            | 9.2.1               | GPL-3.0-or-later | https://github.com/lichess-org/chessground  |
-| @mliebelt/pgn-parser   | 1.4.19              | Apache-2.0       | https://github.com/mliebelt/pgn-parser      |
-| stockfish (npm)        | 19.0.1              | GPL-3.0          | https://github.com/nmrugg/stockfish.js      |
-| Remotion               | 4.0.545             | Remotion Licence | https://github.com/remotion-dev/remotion    |
-| @remotion/player       | 4.0.545             | Remotion Licence | https://github.com/remotion-dev/remotion    |
-| @remotion/web-renderer | 4.0.545             | Remotion Licence | https://github.com/remotion-dev/remotion    |
-| @remotion/media        | 4.0.545             | Remotion Licence | https://github.com/remotion-dev/remotion    |
-| fflate                 | 0.8.3               | MIT              | https://github.com/101arrowz/fflate         |
-| sonner                 | 2.0.8               | MIT              | https://github.com/emilkowalski/sonner      |
+| Next.js                  | 16.4.6              | MIT              | https://github.com/vercel/next.js           |
+| next-themes              | 0.4.6               | MIT              | https://github.com/pacocoursey/next-themes  |
+| React                    | 19.3.0              | MIT              | https://github.com/facebook/react           |
+| React DOM                | 19.3.0              | MIT              | https://github.com/facebook/react           |
+| Tailwind CSS             | 4.3.3               | MIT              | https://github.com/tailwindlabs/tailwindcss |
+| tw-animate-css           | 1.4.0               | MIT              | https://github.com/Wombosvideo/tw-animate-css |
+| shadcn/ui                | registry components | MIT              | https://github.com/shadcn-ui/ui             |
+| cn                       | 0.5.2               | MIT              | https://github.com/shadcn-ui/cn             |
+| class-variance-authority | 0.7.1               | Apache-2.0       | https://github.com/joe-bell/cva             |
+| Radix UI                 | 1.8.1               | MIT              | https://github.com/radix-ui/primitives      |
+| lucide-react             | 1.77.0              | ISC              | https://github.com/lucide-icons/lucide      |
+| Zustand                  | 5.1.0               | MIT              | https://github.com/pmndrs/zustand           |
+| Zod                      | 4.6.7               | MIT              | https://github.com/colinhacks/zod           |
+| idb                      | 8.0.4               | ISC              | https://github.com/jakearchibald/idb        |
+| chess.js                 | 1.4.0               | BSD-2-Clause     | https://github.com/jhlywa/chess.js          |
+| chessground              | 9.2.1               | GPL-3.0-or-later | https://github.com/lichess-org/chessground  |
+| @mliebelt/pgn-parser     | 1.4.19              | Apache-2.0       | https://github.com/mliebelt/pgn-parser      |
+| stockfish (npm)          | 19.0.1              | GPL-3.0          | https://github.com/nmrugg/stockfish.js      |
+| Remotion                 | 4.0.545             | Remotion Licence | https://github.com/remotion-dev/remotion    |
+| @remotion/player         | 4.0.545             | Remotion Licence | https://github.com/remotion-dev/remotion    |
+| @remotion/web-renderer   | 4.0.545             | Remotion Licence | https://github.com/remotion-dev/remotion    |
+| @remotion/media          | 4.0.545             | Remotion Licence | https://github.com/remotion-dev/remotion    |
+| fflate                   | 0.8.3               | MIT              | https://github.com/101arrowz/fflate         |
+| mediabunny               | 1.66.0              | MPL-2.0          | https://github.com/Vanilagy/mediabunny      |
+| sonner                   | 2.0.8               | MIT              | https://github.com/emilkowalski/sonner      |
 
 ## Development software
 
-| Package         | Version | Licence           | Source                                                   |
-| --------------- | ------- | ----------------- | -------------------------------------------------------- |
-| TypeScript      | 5.x     | Apache-2.0        | https://github.com/microsoft/TypeScript                  |
-| Biome           | 2.4.2   | MIT OR Apache-2.0 | https://github.com/biomejs/biome                         |
-| Vitest          | 5.1.1   | MIT               | https://github.com/vitest-dev/vitest                     |
-| Testing Library | 16.3.3  | MIT               | https://github.com/testing-library/react-testing-library |
-| Playwright      | 1.65.1  | Apache-2.0        | https://github.com/microsoft/playwright                  |
+| Package                     | Version | Licence           | Source                                                   |
+| --------------------------- | ------- | ----------------- | -------------------------------------------------------- |
+| TypeScript                  | 5.9.3   | Apache-2.0        | https://github.com/microsoft/TypeScript                  |
+| Biome                       | 2.4.2   | MIT OR Apache-2.0 | https://github.com/biomejs/biome                         |
+| Vitest                      | 5.1.1   | MIT               | https://github.com/vitest-dev/vitest                     |
+| @vitest/coverage-v8         | 5.1.1   | MIT               | https://github.com/vitest-dev/vitest                     |
+| Testing Library React       | 16.3.3  | MIT               | https://github.com/testing-library/react-testing-library |
+| Testing Library jest-dom    | 8.0.0   | MIT               | https://github.com/testing-library/jest-dom               |
+| Testing Library user-event  | 14.6.13 | MIT               | https://github.com/testing-library/user-event            |
+| Playwright                  | 1.65.1  | Apache-2.0        | https://github.com/microsoft/playwright                  |
+| @tailwindcss/turbopack      | 4.3.3   | MIT               | https://github.com/tailwindlabs/tailwindcss              |
+| fake-indexeddb              | 6.2.8   | Apache-2.0        | https://github.com/dumbmatter/fakeIndexedDB              |
+| jsdom                       | 31.0.1  | MIT               | https://github.com/jsdom/jsdom                           |
+| @types/node                 | 24.19.2 | MIT               | https://github.com/DefinitelyTyped/DefinitelyTyped       |
+| @types/react                | 19.3.0  | MIT               | https://github.com/DefinitelyTyped/DefinitelyTyped       |
+| @types/react-dom            | 19.3.0  | MIT               | https://github.com/DefinitelyTyped/DefinitelyTyped       |
 
 ## Chess assets and data
 
@@ -69,6 +82,10 @@ Before distributing a build beyond the single-user owner, review the GPL implica
 ### Remotion
 
 Remotion packages are used under the Remotion Licence. The project is a single-user, individual project. Render calls pass `licenseKey: "free-license"`. If the deployment is shared with other people, review the licence again before continuing.
+
+### Mediabunny
+
+Mediabunny 1.66.0 is distributed under MPL-2.0. ChessForge uses the library unmodified for media muxing and output validation. The source is available at https://github.com/Vanilagy/mediabunny. MPL-2.0 is a file-level copyleft licence; keep this notice and the package licence with the distributed build.
 
 ## No account or cloud data
 

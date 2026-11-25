@@ -20,4 +20,26 @@
 | [0016](0016-video-studio.md) | Video studio |
 | [0017](0017-export-pipeline.md) | Export pipeline |
 
-Add a new ADR before changing an accepted decision. Keep the status line current.
+## R7 decisions
+
+R7 did not add a new architecture decision record. It extends accepted decisions
+in ADR 0005 (storage and repositories) and ADR 0007 (deployment):
+
+- Full application backup uses the `chessforge-backup` format version 1:
+  `manifest.json`, `data.json`, and `assets/<asset-id>` in a ZIP.
+- Single-project backup uses the `chessforge-project` format version 1:
+  `manifest.json`, `project.json`, and referenced assets in a ZIP.
+- Full-app restore validates every record before one write transaction.
+- When the project ID already exists, single-project restore always asks
+  **Restore as copy** or **Overwrite**; overwrite requires a second confirmation.
+- The restore path uses one IndexedDB transaction and keeps the previous data if
+  the transaction aborts.
+- Basic auth remains a reverse-proxy control. The application adds no accounts
+  or credentials.
+- Stockfish stays single-threaded, so COOP/COEP remain disabled.
+- Accessibility uses a pragmatic WCAG 2.1 AA checklist and Playwright tests; no
+  axe dependency is added.
+
+R8 added no ADR. The Chess Library reuses the existing storage, routing, and UI
+patterns. Add a new ADR before changing an accepted decision. Keep the status
+line current.
