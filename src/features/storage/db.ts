@@ -34,6 +34,7 @@ import {
 import { normalizeTemplate } from "@/features/templates/normalization";
 import { type Template, templateSchema } from "@/features/templates/types";
 import {
+  StorageBlockedError,
   StorageMigrationError,
   StorageQuotaError,
   StorageUnavailableError,
@@ -223,7 +224,11 @@ export async function openChessForgeDatabase(): Promise<ChessForgeDatabase> {
   }
 
   dbPromise ??= (async () => {
-    const db = await openDB<ChessForgeDB>(DB_NAME, DB_VERSION, {
+    let rejectBlocked: ((error: StorageBlockedError) => void) | undefined;
+    const blocked = new Promise<never>((_, reject) => {
+      rejectBlocked = reject;
+    });
+    const opening = openDB<ChessForgeDB>(DB_NAME, DB_VERSION, {
       upgrade(database, oldVersion) {
         try {
           if (oldVersion < 1) {
@@ -305,7 +310,7 @@ export async function openChessForgeDatabase(): Promise<ChessForgeDatabase> {
         }
       },
       blocked() {
-        console.warn("ChessForge database upgrade is blocked by another tab.");
+        rejectBlocked?.(new StorageBlockedError());
       },
       blocking() {
         dbPromise
@@ -318,6 +323,16 @@ export async function openChessForgeDatabase(): Promise<ChessForgeDatabase> {
           });
       },
     });
+
+    let db: ChessForgeDatabase;
+    try {
+      db = await Promise.race([opening, blocked]);
+    } catch (error) {
+      // An open request cannot be cancelled. Close the late handle if the
+      // blocking tab closes before the request settles.
+      void opening.then((late) => late.close()).catch(() => {});
+      throw error;
+    }
 
     await db.put("meta", { key: "schemaVersion", value: DB_VERSION });
     return db;

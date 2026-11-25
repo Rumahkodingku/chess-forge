@@ -25,6 +25,7 @@ import {
 } from "@/features/storage/db";
 import { createWalkingSkeletonProject } from "@/features/studio/project-factory";
 import { BUILT_IN_TEMPLATES } from "@/features/templates/builtins";
+import { StorageBlockedError } from "@/lib/errors";
 
 const PGN = `[Event "Storage test"]
 [White "White"]
@@ -295,6 +296,30 @@ describe("IndexedDB repositories", () => {
     expect(settings?.schemaVersion).toBe(2);
     expect(settings?.playerNames).toEqual([]);
     expect(await db.getAll("libraryNotes")).toEqual([]);
+  });
+
+  it("surfaces a blocked upgrade as a recoverable error", async () => {
+    const error = new StorageBlockedError();
+    expect(error.code).toBe("STORAGE_MIGRATION_FAILED");
+    expect(error.recovery).toContain("Close other ChessForge tabs");
+  });
+
+  it("rejects a blocked upgrade when another tab keeps the old version open", async () => {
+    const blocker = await openDB(DB_NAME, 1, {
+      upgrade(database) {
+        database.createObjectStore("games", { keyPath: "id" });
+        database.createObjectStore("settings", { keyPath: "key" });
+        database.createObjectStore("meta", { keyPath: "key" });
+      },
+    });
+
+    await expect(openChessForgeDatabase()).rejects.toBeInstanceOf(
+      StorageBlockedError,
+    );
+
+    blocker.close();
+    const db = await openChessForgeDatabase();
+    expect(db.version).toBe(2);
   });
 
   it("round trips a library note by target", async () => {

@@ -73,6 +73,17 @@ export class StorageMigrationError extends AppError {
   }
 }
 
+export class StorageBlockedError extends AppError {
+  constructor() {
+    super(
+      "STORAGE_MIGRATION_FAILED",
+      "The local database upgrade is blocked by another ChessForge tab.",
+      "Close other ChessForge tabs, reload this page, and try again.",
+    );
+    this.name = "StorageBlockedError";
+  }
+}
+
 export class UnsupportedCapabilityError extends AppError {
   constructor(
     message: string,
