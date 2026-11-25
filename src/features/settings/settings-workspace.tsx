@@ -223,8 +223,8 @@ export function SettingsWorkspace() {
   }
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
-      <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto border border-border/80 bg-surface-1 p-1 sm:w-auto">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5 flex flex-col">
+      <TabsList className="h-full w-full justify-start gap-1 overflow-x-auto border border-border/80 bg-surface-1 p-1 sm:w-auto">
         <TabsTrigger value="general" className="flex-none px-3">
           General
         </TabsTrigger>

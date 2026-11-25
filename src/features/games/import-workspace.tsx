@@ -938,9 +938,9 @@ export function ImportWorkspace() {
           setGlobalWarnings([]);
           setError(null);
         }}
-        className="space-y-4"
+        className="space-y-4 flex flex-col"
       >
-        <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto border border-border/80 bg-surface-1 p-1 sm:w-auto">
+        <TabsList className="h-full w-full justify-start gap-1 overflow-x-auto border border-border/80 bg-surface-1 p-1">
           {(Object.keys(SOURCE_LABELS) as ImportSource[]).map((key) => (
             <TabsTrigger key={key} value={key} className="flex-none px-3">
               {SOURCE_LABELS[key]}
