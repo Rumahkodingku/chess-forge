@@ -95,7 +95,7 @@ The repository contains a Dockerfile, so Coolify can build it directly from Git.
 6. Set the healthcheck to HTTP `GET /api/health` on port `3000`, expecting status `200`.
 7. Add the public domain and enable the Coolify-managed TLS certificate.
 8. Enable HTTPS redirect after the certificate is issued.
-9. Enable HTTP basic auth at the proxy. If the installed Coolify version exposes a proxy-auth setting or a Traefik middleware for the application, use it. If it does not, put nginx in front of Coolify as shown in section 5. The application does not implement auth.
+9. Enable HTTP basic auth at the proxy. Prefer a Coolify/Traefik basic-auth middleware, with `/api/health` excluded. Coolify does not publish the app container on host port `3000` by default, so do not reuse the direct-Docker nginx upstream unchanged. If nginx must front Coolify, proxy to Coolify's Traefik entrypoint or add an explicit host port mapping as described in section 5. The application does not implement auth.
 10. Deploy and watch the build and runtime logs.
 
 Verify from outside the host:
@@ -118,7 +118,7 @@ Route Handler rate limits use an in-memory bucket per server process. Restarting
 
 ## 5. Basic auth at the reverse proxy
 
-Basic auth is not implemented in application code. Terminate it at the proxy. The nginx example below is one option for a VPS or an nginx layer in front of Coolify. A Coolify installation that terminates with Traefik should use an equivalent Traefik basic-auth middleware instead. In both cases, route `/api/health` around the auth middleware so the healthcheck stays reachable.
+Basic auth is not implemented in application code. Terminate it at the proxy. The nginx example below targets a direct Docker or VPS deployment where the app is published on `127.0.0.1:3000`. Coolify uses its own Traefik proxy and does not publish the app on that host port by default; use the Coolify upstream guidance below instead of copying the example unchanged. In every case, route `/api/health` around the auth middleware so the healthcheck stays reachable.
 
 Generate a password file interactively. The password is not written to the repository or shell history:
 
@@ -126,6 +126,16 @@ Generate a password file interactively. The password is not written to the repos
 sudo apt install apache2-utils
 sudo htpasswd -c /etc/nginx/chessforge.htpasswd chessforge
 ```
+
+### Direct Docker or VPS upstream
+
+Publish the app only on loopback, then point nginx at that mapped port:
+
+```bash
+docker run -d --name chessforge -p 127.0.0.1:3000:3000 chessforge
+```
+
+The `127.0.0.1:3000:3000` mapping is required. Without it, nginx cannot reach the container at `127.0.0.1:3000`.
 
 Example nginx server block fragment:
 
@@ -165,6 +175,14 @@ Rules:
 - Keep the password file outside the Git repository.
 - The healthcheck endpoint is exempt so the proxy does not report the container unhealthy with a `401`.
 - If the proxy does not set `X-Forwarded-For`, every client shares one rate-limit bucket. If the app is exposed directly, clients can spoof the header. Keep the app behind the trusted proxy and overwrite the header with the real client address.
+
+### Coolify upstream
+
+Coolify routes the app through its own Traefik proxy and does not publish the app container on `127.0.0.1:3000` by default. Use one of these options:
+
+1. **Preferred:** enable HTTP basic auth as a Traefik middleware in Coolify and exclude `/api/health`.
+2. **nginx in front of Coolify:** proxy to Coolify's Traefik HTTP entrypoint, for example the Coolify host on port `80`, and preserve the original `Host`, `X-Forwarded-Proto`, and `X-Forwarded-For` headers. Do not use `127.0.0.1:3000` unless you added the mapping. If Coolify force-redirects HTTP to HTTPS, terminate TLS at Coolify/Traefik or disable that redirect on the entrypoint used by nginx to avoid a redirect loop. The exact entrypoint depends on the Coolify installation.
+3. **Explicit host port mapping:** add a mapping such as `127.0.0.1:3000:3000` to the application in Coolify, then use the direct upstream example above. Verify the mapping with `curl -fsS http://127.0.0.1:3000/api/health` before enabling the nginx configuration.
 
 ## 6. TLS
 

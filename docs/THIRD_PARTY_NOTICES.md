@@ -30,7 +30,12 @@ ChessForge is a local-first, single-user application. This file records the thir
 | @remotion/media          | 4.0.545             | Remotion Licence | https://github.com/remotion-dev/remotion    |
 | fflate                   | 0.8.3               | MIT              | https://github.com/101arrowz/fflate         |
 | mediabunny               | 1.66.0              | MPL-2.0          | https://github.com/Vanilagy/mediabunny      |
+| @mediabunny/aac-encoder  | 1.66.0              | MPL-2.0; FFmpeg LGPL-2.1-or-later | https://mediabunny.dev/guide/extensions/aac-encoder |
+| @mediabunny/mp3-encoder  | 1.66.0              | MPL-2.0; LAME LGPL-2.0-or-later | https://mediabunny.dev/guide/extensions/mp3-encoder |
+| @mediabunny/flac-encoder | 1.66.0              | MPL-2.0; libFLAC BSD-3-Clause-style | https://mediabunny.dev/guide/extensions/flac-encoder |
 | sonner                   | 2.0.8               | MIT              | https://github.com/emilkowalski/sonner      |
+
+The `@mediabunny/*-encoder` packages are transitive dependencies of `@remotion/web-renderer` 4.0.545. They are not direct dependencies of ChessForge.
 
 ## Development software
 
@@ -83,9 +88,17 @@ Before distributing a build beyond the single-user owner, review the GPL implica
 
 Remotion packages are used under the Remotion Licence. The project is a single-user, individual project. Render calls pass `licenseKey: "free-license"`. If the deployment is shared with other people, review the licence again before continuing.
 
-### Mediabunny
+### Mediabunny and encoder extensions
 
-Mediabunny 1.66.0 is distributed under MPL-2.0. ChessForge uses the package unmodified for container muxing and output validation. The export path takes H.264/AAC/VP8/VP9/Opus encoding from the browser's WebCodecs implementation; Mediabunny's own codec helpers are part of the same MPL-2.0 package. No separate encoder binary or codec package is installed for ChessForge. Mediabunny's only declared runtime dependencies are the type packages `@types/dom-mediacapture-transform` and `@types/dom-webcodecs`. If a future version adds a separate encoder package, add that package and its licence to this inventory before release. The source is available at https://github.com/Vanilagy/mediabunny. Keep this notice and the package licence with the distributed build.
+Mediabunny 1.66.0 is distributed under MPL-2.0. ChessForge uses the package unmodified for container muxing and output validation. The export path takes H.264, VP8, VP9, and Opus encoding from the browser's WebCodecs implementation when available; AAC has the FFmpeg fallback described below. Mediabunny's own codec helpers are part of the same MPL-2.0 package.
+
+`@remotion/web-renderer` 4.0.545 also installs three Mediabunny encoder extensions. They are transitive dependencies, not direct ChessForge dependencies:
+
+- `@mediabunny/aac-encoder` 1.66.0 is MPL-2.0 and bundles a WebAssembly build of FFmpeg's AAC-LC encoder. FFmpeg is LGPL-2.1-or-later; the bundled build enables no GPL, version 3, or nonfree components. It was built from FFmpeg commit `60a2818f76dcd1fee3155b1791304af104a0fc1b`. The extension registers only when the browser cannot encode AAC natively. MP4 export can therefore use this FFmpeg encoder when native WebCodecs AAC is unavailable. Source: https://github.com/FFmpeg/FFmpeg/commit/60a2818f76dcd1fee3155b1791304af104a0fc1b and https://github.com/Vanilagy/mediabunny/tree/main/packages/aac-encoder.
+- `@mediabunny/mp3-encoder` 1.66.0 is MPL-2.0 and bundles LAME 3.100 under LGPL-2.0-or-later. ChessForge does not offer MP3 export, but the package is installed transitively. Source: https://lame.sourceforge.io/ and https://github.com/Vanilagy/mediabunny/tree/main/packages/mp3-encoder.
+- `@mediabunny/flac-encoder` 1.66.0 is MPL-2.0 and bundles libFLAC under the Xiph BSD-style licence. ChessForge does not offer FLAC export, but the package is installed transitively. Source: https://github.com/xiph/flac/commit/3f1ecff843dd1b8c07fbb5f59425a4ec71fe4f6c and https://github.com/Vanilagy/mediabunny/tree/main/packages/flac-encoder.
+
+The encoder packages ship their upstream licence files under `licenses/`. Keep those files, this notice, and the source links with the distributed build. If a future dependency adds a separate encoder package, add that package and its licence to this inventory before release.
 
 ## No account or cloud data
 
