@@ -265,7 +265,7 @@ There is no undo for a completed overwrite. Export before every overwrite.
 | --- | --- | --- |
 | `502` from the proxy | `docker logs chessforge`; `curl -fsS http://127.0.0.1:3000/api/health` | Start the container and confirm it listens on port 3000. |
 | Healthcheck `unhealthy` | `docker inspect --format '{{.State.Health.Status}}' chessforge` | Confirm `/api/health` returns `200` inside the container. |
-| Proxy returns `401` for the healthcheck | Proxy auth covers `/api/health` | Exempt `/api/health` from basic auth, or give the healthcheck credentials outside the repository. |
+| Proxy returns `401` for an external healthcheck | Proxy auth covers `/api/health`; the Docker healthcheck itself runs inside the container | Exempt `/api/health` from basic auth, or give the external probe credentials outside the repository. |
 | Every client hits the rate limit at once | Proxy does not set `X-Forwarded-For` | Set and overwrite `X-Forwarded-For` at the proxy. |
 | Static assets or engine files `404` | Request `/engine/stockfish/stockfish-19-lite-single.js` | Rebuild the image; a manual standalone start must copy `public` and `.next/static`. |
 | App works on the old domain but not the new one | Browser origin changed | Export from the old origin, then import on the new origin. |

@@ -118,7 +118,7 @@ Route Handler rate limits use an in-memory bucket per server process. Restarting
 
 ## 5. Basic auth at the reverse proxy
 
-Basic auth is not implemented in application code. Terminate it at the proxy. The nginx example below targets a direct Docker or VPS deployment where the app is published on `127.0.0.1:3000`. Coolify uses its own Traefik proxy and does not publish the app on that host port by default; use the Coolify upstream guidance below instead of copying the example unchanged. In every case, route `/api/health` around the auth middleware so the healthcheck stays reachable.
+Basic auth is not implemented in application code. Terminate it at the proxy. The nginx example below targets a direct Docker or VPS deployment where the app is published on `127.0.0.1:3000`. Coolify uses its own Traefik proxy and does not publish the app on that host port by default; use the Coolify upstream guidance below instead of copying the example unchanged. In every case, route `/api/health` around the auth middleware so external and Coolify health probes stay reachable.
 
 Generate a password file interactively. The password is not written to the repository or shell history:
 
@@ -147,7 +147,7 @@ server {
     ssl_certificate     /etc/letsencrypt/live/chess.example.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/chess.example.com/privkey.pem;
 
-    # Keep the healthcheck reachable without credentials.
+    # Keep external health probes reachable without credentials.
     location = /api/health {
         auth_basic off;
         proxy_pass http://127.0.0.1:3000;
@@ -173,15 +173,15 @@ Rules:
 
 - Basic auth sends a reversible Base64 credential, not an encrypted one. Use it only over HTTPS.
 - Keep the password file outside the Git repository.
-- The healthcheck endpoint is exempt so the proxy does not report the container unhealthy with a `401`.
-- If the proxy does not set `X-Forwarded-For`, every client shares one rate-limit bucket. If the app is exposed directly, clients can spoof the header. Keep the app behind the trusted proxy and overwrite the header with the real client address.
+- The Docker `HEALTHCHECK` probes `127.0.0.1:3000` inside the container, so a proxy `401` does not make the container unhealthy. Exempt `/api/health` from proxy auth so external and Coolify probes can still reach it.
+- `clientKey()` rate-limits by the first `X-Forwarded-For` value. Overwrite the header with `$remote_addr` at the trusted nginx layer, as shown. Do not preserve a client-supplied `X-Forwarded-For` chain: a client can put a fresh address first and bypass the bucket. If the app is exposed directly, clients can spoof the header. Keep the app behind the trusted proxy.
 
 ### Coolify upstream
 
 Coolify routes the app through its own Traefik proxy and does not publish the app container on `127.0.0.1:3000` by default. Use one of these options:
 
 1. **Preferred:** enable HTTP basic auth as a Traefik middleware in Coolify and exclude `/api/health`.
-2. **nginx in front of Coolify:** proxy to Coolify's Traefik HTTP entrypoint, for example the Coolify host on port `80`, and preserve the original `Host`, `X-Forwarded-Proto`, and `X-Forwarded-For` headers. Do not use `127.0.0.1:3000` unless you added the mapping. If Coolify force-redirects HTTP to HTTPS, terminate TLS at Coolify/Traefik or disable that redirect on the entrypoint used by nginx to avoid a redirect loop. The exact entrypoint depends on the Coolify installation.
+2. **nginx in front of Coolify:** run nginx on a separate host, or remap Traefik's published host ports, because Traefik normally binds `80` and `443` on the Coolify host. Proxy to Traefik's HTTP entrypoint, for example the Coolify host on port `80`, and preserve the original `Host` and `X-Forwarded-Proto` headers. Overwrite `X-Forwarded-For` with `$remote_addr`; do not preserve a client-supplied chain, because `clientKey()` uses the first value. Do not use `127.0.0.1:3000` unless you added the mapping. If Coolify force-redirects HTTP to HTTPS, terminate TLS at Coolify/Traefik or disable that redirect on the entrypoint used by nginx to avoid a redirect loop. The exact entrypoint depends on the Coolify installation.
 3. **Explicit host port mapping:** add a mapping such as `127.0.0.1:3000:3000` to the application in Coolify, then use the direct upstream example above. Verify the mapping with `curl -fsS http://127.0.0.1:3000/api/health` before enabling the nginx configuration.
 
 ## 6. TLS
@@ -357,7 +357,7 @@ The server keeps no user data, so a failed deployment does not delete browser pr
 - [ ] `docker run --rm -p 3000:3000 chessforge` starts.
 - [ ] `/api/health` returns `200` with `status: "ok"`.
 - [ ] The domain resolves and HTTPS redirects work.
-- [ ] Basic auth protects the app and `/api/health` stays reachable for the healthcheck.
+- [ ] Basic auth protects the app, while `/api/health` stays reachable for external and Coolify probes.
 - [ ] Security headers are present.
 - [ ] Rate limits return `429` after the configured burst.
 - [ ] A full backup exports and restores in a test browser profile.
