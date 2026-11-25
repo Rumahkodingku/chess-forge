@@ -834,6 +834,9 @@ export default function AnalysisGamePage() {
                   capturedColor={topCapturedColor}
                   playerColor={orientation === "w" ? "b" : "w"}
                 />
+                <output aria-atomic="true" className="sr-only">
+                  {displayedLabel}
+                </output>
                 <div className="mt-2 flex items-stretch gap-2">
                   {analysisEvaluation ? (
                     <EvaluationBar

@@ -270,10 +270,21 @@ function TrackRow({
   spans: Array<{ id: string; start: number; duration: number; label: string }>;
   duration: number;
 }) {
+  const summary = spans.length
+    ? spans
+        .slice(0, 12)
+        .map((span) => span.label)
+        .join(", ")
+    : "empty";
+
   return (
     <div className="grid grid-cols-[90px_minmax(0,1fr)] items-center gap-2">
       <span className="text-[10px] text-muted-foreground">{label}</span>
-      <div className="relative h-5 overflow-hidden rounded bg-surface-2/70">
+      <div
+        role="img"
+        aria-label={`${label} track: ${summary}`}
+        className="relative h-5 overflow-hidden rounded bg-surface-2/70"
+      >
         {spans.map((span) => (
           <span
             key={span.id}

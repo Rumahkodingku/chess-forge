@@ -605,7 +605,11 @@ export function ExportPanel({
               </span>
               <span className="tabular-nums">{progress?.percent ?? 0}%</span>
             </div>
-            <Progress value={progress?.percent ?? 0} className="h-1.5" />
+            <Progress
+              value={progress?.percent ?? 0}
+              aria-label="Export progress"
+              className="h-1.5"
+            />
             {progress?.estimatedMs ? (
               <p className="text-[10px] text-muted-foreground">
                 Estimated {Math.ceil(progress.estimatedMs / 1000)}s remaining
