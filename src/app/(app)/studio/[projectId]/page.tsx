@@ -4,6 +4,7 @@ import type { PlayerRef } from "@remotion/player";
 import {
   ArrowLeft,
   Clapperboard,
+  Download,
   Loader2,
   Redo2,
   Save,
@@ -33,6 +34,7 @@ import {
   createProjectRepository,
   openChessForgeDatabase,
 } from "@/features/storage/db";
+import { exportProjectBackup } from "@/features/storage/project-backup";
 import { ExportPanel } from "@/features/studio/components/export-panel";
 import { ProjectAudioEditor } from "@/features/studio/components/project-audio-editor";
 import { SceneInspector } from "@/features/studio/components/scene-inspector";
@@ -53,6 +55,7 @@ import {
 } from "@/features/studio/editing/scene-editing";
 import { useProjectAutosave } from "@/features/studio/editing/use-project-autosave";
 import { useProjectEditor } from "@/features/studio/editing/use-project-editor";
+import { projectSlug } from "@/features/studio/file-name";
 import { ProjectComposition } from "@/features/studio/rendering/project-composition";
 import { validateTextOverlays } from "@/features/studio/rendering/text-safety";
 import { projectDurationInFrames } from "@/features/studio/rendering/timeline";
@@ -87,6 +90,7 @@ export default function StudioProjectPage() {
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [exportingBackup, setExportingBackup] = useState(false);
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const [applyTemplateOpen, setApplyTemplateOpen] = useState(false);
   const [selectedSceneIndex, setSelectedSceneIndex] = useState(0);
@@ -397,6 +401,26 @@ export default function StudioProjectPage() {
     }
   }
 
+  async function exportBackup() {
+    if (!project) return;
+    setExportingBackup(true);
+    try {
+      await persistence.saveNow();
+      const blob = await exportProjectBackup(project.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${projectSlug(project.name)}.chessforge`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success("Project backup exported.");
+    } catch (error) {
+      toast.error(toErrorMessage(error));
+    } finally {
+      setExportingBackup(false);
+    }
+  }
+
   if (loadState === "invalid" || loadState === "missing") {
     return (
       <div className="space-y-6">
@@ -514,6 +538,20 @@ export default function StudioProjectPage() {
             <Save aria-hidden className="size-3.5" />
           )}
           Save now
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => void exportBackup()}
+          disabled={exportingBackup}
+        >
+          {exportingBackup ? (
+            <Loader2 aria-hidden className="size-3.5 animate-spin" />
+          ) : (
+            <Download aria-hidden className="size-3.5" />
+          )}
+          Export project backup
         </Button>
         <span
           aria-live="polite"
