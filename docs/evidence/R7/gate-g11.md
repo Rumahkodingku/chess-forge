@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-25
 **Gate:** G11
-**Status:** **OPEN** — local release gates pass; R8 human content sign-off is not recorded.
+**Status:** **OPEN** — local automated gates pass; performance coverage is partial. R8 human content sign-off is not recorded, and live Coolify basic auth is unexercised (G4).
 **Branch:** `main`
 **Commit under test:** `1b76cd4` (`test: harden release restore coverage`)
 **Spec:** `docs/specs/R7-hardening-and-release.md` §11
@@ -30,7 +30,8 @@ The Docker image, headers, health endpoint, and standalone start were verified
 locally. The proxy configuration is documented but was not run against a live
 Coolify instance.
 
-Everything else in the G11 pass list is covered below.
+The remaining gate items are recorded below, including the partial performance
+coverage.
 
 ## 2. Environment
 
@@ -56,18 +57,23 @@ All commands ran on `1b76cd4` before the evidence-only commit.
 | --- | --- |
 | `npm run check:all` | PASS: lint 288 files, 11 pre-existing warnings, 0 errors; typecheck clean; 67 test files, 344 tests passed; production build completed, 27/27 static pages generated |
 | `npx playwright test` | PASS: 49 development E2E tests in 4.5 min |
-| `npm run test:e2e:prod` | PASS: production build plus 11 production E2E tests across 8 specs in 2.9 min |
+| `npm run test:e2e:prod` | PASS: production build plus 11 production E2E tests across 9 spec files in 2.9 min |
 | `docker build -t chessforge .` | PASS: multi-stage build, image `chessforge:latest` |
 | Container health check | PASS: `healthy`, `/api/health` HTTP 200, security headers present, Stockfish JS 200 |
 
-The production suite includes the three R7 performance budgets. Current values:
+The production suite includes the three R7 performance budgets. These are the
+automated G11 rerun values, not the manual checklist:
 
-| Measurement | Target | Result |
+| Measurement | Target | Automated G11 rerun (2026-11-25, `1b76cd4`) |
 | --- | --- | --- |
 | Initial shell usable without Stockfish | under 2000 ms | 460.7 ms, PASS |
 | Open typical local project | under 2000 ms | 146.0 ms, PASS |
 | Move navigation, worst adjusted step | under 100 ms | 7.1 ms after a 16.3 ms baseline, PASS |
 | Main-thread long task in measured flows | under 200 ms | none, PASS |
+
+The first automated production run recorded 431.9 / 114.0 / 8.6 ms. Both runs
+are automated; `docs/evidence/R7/performance.md` labels them by date. Neither
+run measures scene/timeline switch latency or engine/export long tasks.
 
 The build prints a pre-existing Mediabunny duplicate-load warning. It does not
 fail the build or the export tests; it is listed under known limitations.
@@ -83,7 +89,7 @@ fail the build or the export tests; it is listed under known limitations.
 | AC-05 Video project | PASS | `e2e/r7-release.spec.ts` scenarios 3–5 (create from selected move, apply and customise template, save, reload, reopen); `e2e/r5-studio.spec.ts` |
 | AC-06 Timeline and preview | PASS | `e2e/r7-release.spec.ts` scene creation; `e2e/r7-accessibility.spec.ts` keyboard playback, seek, scene duration, and reorder; `docs/evidence/R7/performance.md` preview measurement 29.78 composition FPS against a 30 FPS target, within headless noise |
 | AC-07 Export | PASS | `e2e/r7-release.spec.ts` scenario 6 exports a 720p WebM and validates it with `scripts/validate-video.mjs`; `e2e/r6-export.spec.ts`; `e2e/r6-production.spec.ts` and `e2e/r7-production.spec.ts` export against the production build; capability unit tests |
-| AC-08 Local persistence | PASS | `src/features/storage/backup.test.ts` full-app round-trip, invalid-record rejection, unsupported version, and injected-write rollback; `src/features/storage/project-backup.test.ts` export, copy, overwrite, missing asset, checksum, and invalid project; `e2e/r7-release.spec.ts` full backup, clean restore, copy, overwrite; `e2e/r7-production.spec.ts` restore against production. Nine partial error-matrix rows remain documented in §6. |
+| AC-08 Local persistence | PASS | `src/features/storage/backup.test.ts` full-app round-trip, invalid-record rejection, unsupported version, and injected-write rollback; `src/features/storage/project-backup.test.ts` export, copy, overwrite, missing asset, checksum, and invalid project; `src/features/storage/db.test.ts` v1→v2 migration, blocked upgrade, corrupt project skip, and corrupt asset recovery; `e2e/r7-release.spec.ts` full backup, clean restore, copy, overwrite; `e2e/r7-production.spec.ts` restore against production. Nine partial error-matrix rows remain documented in §6. |
 | AC-09 Product constraints | PASS | No account, login, auth, or credential files are tracked (`git ls-files` check); no external database or cloud renderer is installed; `e2e/r7-production.spec.ts` blocks every external HTTP(S) host and still completes the seven-scenario journey; security headers verified in the container. One optional Remotion telemetry request is attempted and blocked; see §10. |
 
 No acceptance criterion failed.
@@ -161,18 +167,25 @@ matching assets by hash, and remaps colliding asset IDs.
 
 ## 8. Performance and accessibility
 
-Performance evidence is in `docs/evidence/R7/performance.md`. Automated budgets
-ran again on the current commit and passed (§3). The manual checklist records:
+Performance evidence is in `docs/evidence/R7/performance.md`. The automated
+budgets passed in the G11 production rerun (§3). The manual checklist covers the
+remaining measured checks:
 
-| Check | Result |
-| --- | --- |
-| Initial shell | PASS, 431.9 ms in the manual run; 460.7 ms in this gate run |
-| Project open | PASS, 114.0 ms manual; 146.0 ms in this gate run |
-| Move navigation | PASS, 7.1 ms worst adjusted step in this gate run |
-| Preview FPS | PASS with caveat, 29.78 composition FPS against a 30 FPS target |
-| 60-second 1080p 30 FPS export | PASS, 82.4 s wall time, validated 60.02 s WebM |
-| Memory | No visible JS heap growth; no out-of-memory failure |
-| Thermal | Not measurable in WSL2; no throttling observed over the run |
+| Check | Type | Result |
+| --- | --- | --- |
+| Initial shell | Automated | PASS, 460.7 ms in the G11 rerun (431.9 ms first run) |
+| Project open | Automated | PASS, 146.0 ms in the G11 rerun (114.0 ms first run) |
+| Move navigation | Automated | PASS, 7.1 ms worst adjusted step in the G11 rerun (8.6 ms first run) |
+| Preview FPS | Manual | PASS with caveat, 29.78 composition FPS against a 30 FPS target |
+| 60-second 1080p 30 FPS export | Manual | PASS, 82.4 s wall time, validated 60.02 s WebM |
+| Memory | Manual | No visible JS heap growth; no out-of-memory failure |
+| Thermal | Manual | Not measurable in WSL2; no throttling observed over the run |
+| Scene/timeline switch | Not measured | GAP: studio E2E covers behaviour, not latency |
+| Engine/export long tasks | Not measured | GAP: only shell, project-open, and move flows assert long tasks |
+
+Performance is **PARTIAL** against spec §6.2. Three of the five automated targets
+are covered; scene/timeline switch responsiveness and engine/export main-thread
+freeze checks remain unmeasured. This is recorded as a known gap, not a pass.
 
 Accessibility evidence is in `docs/evidence/R7/accessibility.md`. The four
 Playwright tests passed in the 49-test development suite:
@@ -239,16 +252,16 @@ pieces CC BY-SA 3.0, and the CC0 data and SFX notices.
 | Item | Status |
 | --- | --- |
 | AC-01 to AC-09 pass | PASS |
-| All phase gates G0 to G12 pass | **OPEN** — G11 and G12 content sign-off |
+| All phase gates G0 to G12 pass | **OPEN** — G11/G12 content sign-off and G4 live basic auth |
 | Unit, integration, and E2E tests pass | PASS |
 | Production build passes | PASS |
 | Backup export and restore pass | PASS |
 | Docker build and Coolify deployment pass | Docker PASS; live Coolify not exercised |
 | Accessibility review passes | PASS for the pragmatic WCAG 2.1 AA target |
-| Performance review passes | PASS for automated budgets and the manual checklist |
+| Performance review passes | **PARTIAL** — budgets pass; scene/timeline switch and engine/export long tasks unmeasured |
 | Licence inventory is complete | PASS |
 | Documentation is complete | PASS, with G11 deliberately recorded as open |
-| No unrelated complexity was introduced | PASS: independent reviews reported clean; no runtime dependency added |
+| No unrelated complexity was introduced | PASS: no runtime dependency added; Task 10 changed documentation only |
 
 ## 12. Known limitations
 
@@ -257,8 +270,8 @@ pieces CC BY-SA 3.0, and the CC0 data and SFX notices.
    reading at least one article per category and confirming tone and accuracy.
 2. **Live Coolify basic auth was not exercised.** G4 remains local PASS / live
    BLOCKED. Apply proxy auth and TLS before a public deployment.
-3. **Nine error-matrix rows are partial.** They are listed in §6. None causes
-   silent data loss; all have a visible error or a working recovery path.
+3. **Nine error-matrix rows are partial.** They are listed in §6. Some clamp
+   silently or omit an explanation. None causes silent data loss.
 4. **Full-app restore does not hash asset bytes.** It validates asset metadata
    and file presence. Single-project restore verifies hashes. A tampered asset in
    a full backup would be restored as-is.
@@ -268,9 +281,10 @@ pieces CC BY-SA 3.0, and the CC0 data and SFX notices.
    found in the installed version.
 6. **Mediabunny is bundled twice.** The build and runtime print a duplicate-load
    warning. Exports pass, but this deserves a separate dependency investigation.
-7. **Performance reference is a proxy.** The run used WSL2 with 8 GB and headless
-   Chromium, not a 16 GB bare-metal desktop. Preview composition measured 29.78
-   FPS against a 30 FPS target; engine and export long tasks were not asserted.
+7. **Performance is partial and its reference is a proxy.** The run used WSL2
+   with 8 GB and headless Chromium, not a 16 GB bare-metal desktop. Preview
+   composition measured 29.78 FPS against a 30 FPS target. Scene/timeline switch
+   latency and engine/export long tasks were not measured.
 8. **Accessibility has accepted exceptions.** No physical screen-reader run, the
    board is one labelled image, timeline drag reorder is pointer-only, and the
    card border contrast exception is documented in `accessibility.md`.
@@ -298,5 +312,6 @@ data validation. The content sign-off is a human review and was not performed by
 this task.
 
 **G11 therefore remains OPEN.** Record the human sign-off in
-`docs/evidence/R8/gate-g12.md`, then re-run this gate checklist and change the
-status in this file. Do not close G11 before that record exists.
+`docs/evidence/R8/gate-g12.md`, exercise or explicitly accept live Coolify basic
+auth for G4, then re-run this gate checklist and change the status in this file.
+Do not close G11 before both records exist.

@@ -1,7 +1,7 @@
 # R7 Performance Evidence
 
 - Date: 2026-11-25
-- Status: PASS
+- Status: PARTIAL — automated budgets pass; scene/timeline switch and engine/export long tasks are not measured.
 - Spec: `docs/specs/R7-hardening-and-release.md` §6
 - Automated spec: `e2e/r7-performance.spec.ts`
 
@@ -23,7 +23,11 @@ close proxy: a laptop-class integrated-GPU machine under WSL2 with 8 GB assigned
 
 ## Automated budgets
 
-Production build run:
+Both runs below are automated production measurements. They were taken on the
+same machine and spec, at different times; the G11 rerun is the current gate
+record.
+
+First production run:
 
 ```bash
 npm run build
@@ -36,6 +40,23 @@ npx playwright test -c playwright.production.config.ts e2e/r7-performance.spec.t
 | Open typical local project | under 2000 ms | 114.0 ms | 2000 ms | PASS |
 | Move navigation (worst of 12 arrow-key steps) | under 100 ms | 8.6 ms after a 15.5 ms paint baseline | 100 ms | PASS |
 | Main-thread long task in measured flow | under 200 ms | none recorded | 200 ms | PASS |
+
+G11 rerun on 2026-11-25 at commit `1b76cd4`:
+
+```bash
+npm run test:e2e:prod
+```
+
+| Measurement | Target | Raw | Budget | Result |
+| --- | --- | --- | --- | --- |
+| Initial shell usable without Stockfish | under 2000 ms | 460.7 ms | 2000 ms | PASS |
+| Open typical local project | under 2000 ms | 146.0 ms | 2000 ms | PASS |
+| Move navigation (worst of 12 arrow-key steps) | under 100 ms | 7.1 ms after a 16.3 ms paint baseline | 100 ms | PASS |
+| Main-thread long task in measured flow | under 200 ms | none recorded | 200 ms | PASS |
+
+Run-to-run variance is expected. The gate evidence quotes the G11 rerun. Neither
+run measures scene/timeline switch latency, engine-analysis long tasks, or
+export long tasks.
 
 The shell check asserts that the Dashboard `h1` is visible and that no `stockfish` resource is
 requested. "Usable" here means the shell heading is rendered; it is not a full-interactivity
@@ -67,13 +88,15 @@ tasks. No application code was changed because no production bottleneck exceeded
 | Check | Result |
 | --- | --- |
 | Hardware and browser documented | PASS |
-| Initial shell time | PASS, 431.9 ms (`h1` visible) |
-| Project open time | PASS, 114.0 ms (automated), 283 ms (cold script open) |
-| Move navigation time | PASS, 8.6 ms worst adjusted step |
+| Initial shell time | PASS, automated 460.7 ms in the G11 rerun (431.9 ms first run); `h1` visible |
+| Project open time | PASS, automated 146.0 ms in the G11 rerun (114.0 ms first run); 283 ms cold script open |
+| Move navigation time | PASS, automated 7.1 ms worst adjusted step in the G11 rerun (8.6 ms first run) |
+| Scene/timeline switch | NOT MEASURED; the studio E2E exercises selection, duration, and reorder but not latency |
 | Preview FPS | PASS, 60.05 display FPS and 29.78 composition FPS (within noise) |
 | 60-second 1080p 30 FPS export | PASS, 82.4 s wall time (1.37x video duration) |
+| Engine/export long tasks | NOT MEASURED; only the measured shell, project-open, and move flows assert long tasks |
 | Memory / thermal observations | PASS with limits, see below |
-| Pass/fail against PRD §8.1 | PASS, with engine/export long tasks not measured |
+| Pass/fail against PRD §8.1 | PARTIAL, budgets pass; scene/timeline switch and engine/export long tasks are not measured |
 
 ### Preview FPS
 
@@ -133,6 +156,7 @@ throttle under a longer export session; that could not be measured here.
 | Initial shell usable without Stockfish | Automated shell check, no engine request |
 | Local project open under 2 s | Automated project-open check |
 | Move navigation under 100 ms | Automated move-navigation check |
+| Scene/timeline switch visibly responsive | Not measured. Studio E2E covers selection, duration, and reorder behaviour only. |
 | Autosave debounced and non-blocking | Covered by R5 autosave tests; no long task in measured flows |
 | Engine analysis progress, no main-thread freeze | Not measured in Task 6. Stockfish runs in a worker; engine long tasks were not asserted here. |
 | Export long tasks | Not measured in Task 6. Only 60-second export wall time was recorded. |
@@ -155,7 +179,8 @@ development overhead as release evidence. The spec runs in the production job on
   release gate.
 - "Shell usable" means the Dashboard `h1` is visible, not that every control is interactive.
 - Preview stutter cannot be observed in headless mode; only the composition rate was measured.
-- Engine-analysis and export long tasks were not measured in Task 6.
+- Scene/timeline switch latency was not measured; responsiveness is covered only by the studio E2E behaviour checks.
+- Engine-analysis and export long tasks were not measured in Task 6 or the G11 rerun.
 - The reference run is headless; input latency and compositor behaviour on a physical display
   may differ.
 - Thermal throttling cannot be observed in WSL2. The host fan and clock behaviour were not
