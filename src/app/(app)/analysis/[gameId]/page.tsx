@@ -340,7 +340,7 @@ export default function AnalysisGamePage() {
     if (!game) return;
     const moveCount = game.moves.length;
     function onKeyDown(event: KeyboardEvent) {
-      const target = event.target as HTMLElement | null;
+      const target = event.target instanceof HTMLElement ? event.target : null;
       if (
         target?.tagName === "INPUT" ||
         target?.tagName === "TEXTAREA" ||

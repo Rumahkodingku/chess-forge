@@ -10,6 +10,7 @@ export default defineConfig({
     "r5-production.spec.ts",
     "r6-production.spec.ts",
     "r7-performance.spec.ts",
+    "r7-production.spec.ts",
     "r8-production.spec.ts",
   ],
   fullyParallel: false,
@@ -28,7 +29,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run start -- -p 3100",
+    command: "node scripts/start-standalone.mjs",
     url: "http://localhost:3100",
     reuseExistingServer: false,
     timeout: 180_000,
