@@ -32,40 +32,48 @@ npx playwright test -c playwright.production.config.ts e2e/r7-performance.spec.t
 
 | Measurement | Target | Raw | Budget | Result |
 | --- | --- | --- | --- | --- |
-| Initial shell usable without Stockfish | under 2000 ms | 222.8 ms | 2000 ms | PASS |
-| Open typical local project | under 2000 ms | 168.7 ms | 2000 ms | PASS |
-| Move navigation (worst of 12 arrow-key steps) | under 100 ms | 33.8 ms | 100 ms | PASS |
+| Initial shell usable without Stockfish | under 2000 ms | 431.9 ms | 2000 ms | PASS |
+| Open typical local project | under 2000 ms | 114.0 ms | 2000 ms | PASS |
+| Move navigation (worst of 12 arrow-key steps) | under 100 ms | 8.6 ms after a 15.5 ms paint baseline | 100 ms | PASS |
 | Main-thread long task in measured flow | under 200 ms | none recorded | 200 ms | PASS |
 
-The shell check also asserts that no `stockfish` resource is requested.
+The shell check asserts that the Dashboard `h1` is visible and that no `stockfish` resource is
+requested. "Usable" here means the shell heading is rendered; it is not a full-interactivity
+measurement.
 
-Dev-server smoke run (`npx playwright test e2e/r7-performance.spec.ts`):
+Move navigation dispatches one `ArrowRight` per step and waits for one paint plus
+`setTimeout(0)`. Three empty paint samples provide the baseline (median 15.5 ms), which is
+subtracted from each step. The test also asserts that the board label changed from
+`Position: Starting position` and that Previous move is enabled after the steps.
+
+Earlier dev-server probe, before `r7-performance.spec.ts` became production-only:
 
 | Measurement | Raw | Budget (2x) | Result |
 | --- | --- | --- | --- |
 | Initial shell usable | 556.5 ms | 4000 ms | PASS |
 | Open typical local project | 424.3 ms | 4000 ms | PASS |
-| Move navigation worst step | 110.6 ms | 200 ms | PASS |
-| Long task in measured flow | 145.0 ms | 400 ms | PASS |
+| Move navigation worst step (two-rAF metric) | 110.6 ms | 200 ms | PASS |
+| Long task, project open | 145.0 ms | 400 ms | PASS |
+| Long task, move navigation | 60.0 ms | 400 ms | PASS |
 
-The dev run uses the CI tolerance because unminified React, Tailwind development CSS, and
-on-demand route compilation are not the release measurement. The first dev-mode move
-navigation included a 60-77 ms long task and a ~110 ms first step; the production build removes
-it (33.8 ms worst step, no long tasks). No application code was changed because no production
-bottleneck exceeded its target.
+Those dev values are retained only as a development-overhead observation. The dev project now
+ignores this spec, and the production project does not use the 2x tolerance unless `CI` is set.
+The dev probe recorded two long tasks: 145.0 ms during project open and 60.0 ms during the first
+move; neither flow is part of the release measurement. The production build recorded no long
+tasks. No application code was changed because no production bottleneck exceeded its target.
 
 ## Manual checklist
 
 | Check | Result |
 | --- | --- |
 | Hardware and browser documented | PASS |
-| Initial shell time | PASS, 222.8 ms |
-| Project open time | PASS, 168.7 ms (automated), 283 ms (cold script open) |
-| Move navigation time | PASS, 33.8 ms worst step |
-| Preview FPS | PASS, 60.05 display FPS and 29.78 composition FPS |
-| 60-second 1080p 30 FPS export | PASS, 82.4 s wall time |
+| Initial shell time | PASS, 431.9 ms (`h1` visible) |
+| Project open time | PASS, 114.0 ms (automated), 283 ms (cold script open) |
+| Move navigation time | PASS, 8.6 ms worst adjusted step |
+| Preview FPS | PASS, 60.05 display FPS and 29.78 composition FPS (within noise) |
+| 60-second 1080p 30 FPS export | PASS, 82.4 s wall time (1.37x video duration) |
 | Memory / thermal observations | PASS with limits, see below |
-| Pass/fail against PRD §8.1 | PASS |
+| Pass/fail against PRD §8.1 | PASS, with engine/export long tasks not measured |
 
 ### Preview FPS
 
@@ -78,9 +86,9 @@ Composition update: 29.78 FPS (596 frames advanced in 20.02 s)
 ```
 
 The composition target is 30 FPS. The result is 0.7% under the nominal target, which is within
-headless measurement noise; playback showed no visible stutter. The display loop held 60 FPS,
-so dropped browser frames were not the cause. A separate 6-second sample measured 29.25 FPS,
-confirming the same steady-state range.
+headless measurement noise. The display loop held 60 FPS, so dropped browser frames were not
+the cause. A separate 6-second sample measured 29.25 FPS, confirming the same steady-state
+range. Headless playback cannot prove the absence of visible stutter on a physical display.
 
 ### 60-second 1080p 30 FPS export
 
@@ -103,14 +111,16 @@ Output size: 11 MB
 Validated: 60.02 s, vp9, 1920x1080, opus 48 kHz stereo
 ```
 
-The export completed faster than real time (1.37x). The download was saved and validated with
-`node scripts/validate-video.mjs`.
+The export took 1.37x the video duration (82.4 s for 60 s of video), so it is slower than real
+time. The download was saved and validated with `node scripts/validate-video.mjs`.
 
 ### Memory and thermal
 
 `performance.memory.usedJSHeapSize` was 35.1 MB before export and 35.1 MB after export. The
-snapshot is coarse, but it shows no retained 60-second output in the JS heap; the renderer used
-the OPFS output target instead of an ArrayBuffer.
+snapshot is coarse and rounds to the same value, so it cannot prove whether any output buffer
+was retained. It does show that the JS heap did not visibly spike or grow across the run; the
+renderer used the OPFS output target instead of an ArrayBuffer. No out-of-memory failure or
+crash occurred.
 
 WSL2 exposes no thermal sensors to the guest. The 6-second preview and the 83.8-second export
 both completed at stable speed with no observed throttling. A physical laptop may thermally
@@ -124,21 +134,28 @@ throttle under a longer export session; that could not be measured here.
 | Local project open under 2 s | Automated project-open check |
 | Move navigation under 100 ms | Automated move-navigation check |
 | Autosave debounced and non-blocking | Covered by R5 autosave tests; no long task in measured flows |
-| Engine analysis progress, no main-thread freeze | Stockfish runs in a worker; engine flows are not part of this measured flow |
-| Preview target 30 FPS | Manual preview measurement: 29.78 FPS |
+| Engine analysis progress, no main-thread freeze | Not measured in Task 6. Stockfish runs in a worker; engine long tasks were not asserted here. |
+| Export long tasks | Not measured in Task 6. Only 60-second export wall time was recorded. |
+| Preview target 30 FPS | Manual preview measurement: 29.78 FPS (within noise) |
 
 ## Commands
 
 ```bash
-npx playwright test e2e/r7-performance.spec.ts
 npm run build
 npx playwright test -c playwright.production.config.ts e2e/r7-performance.spec.ts
 ```
 
+`playwright.config.ts` ignores `r7-performance.spec.ts` so the dev suite cannot present
+development overhead as release evidence. The spec runs in the production job only.
+
 ## Known limitations
 
 - CI runs use the 2x tolerance and never assert FPS.
-- Dev-server timings include development-only React and CSS overhead.
+- Dev-server timings include development-only React and CSS overhead and are not part of the
+  release gate.
+- "Shell usable" means the Dashboard `h1` is visible, not that every control is interactive.
+- Preview stutter cannot be observed in headless mode; only the composition rate was measured.
+- Engine-analysis and export long tasks were not measured in Task 6.
 - The reference run is headless; input latency and compositor behaviour on a physical display
   may differ.
 - Thermal throttling cannot be observed in WSL2. The host fan and clock behaviour were not

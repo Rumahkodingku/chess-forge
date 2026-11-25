@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   testIgnore: [
+    "r7-performance.spec.ts",
     "r2-production.spec.ts",
     "r3-production.spec.ts",
     "r4-production.spec.ts",
