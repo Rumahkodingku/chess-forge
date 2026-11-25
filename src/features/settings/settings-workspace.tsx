@@ -8,7 +8,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { StoragePanel } from "@/components/shared/storage-panel";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,10 @@ import {
   applicationSettingsSchema,
   DEFAULT_SETTINGS,
 } from "@/features/settings/types";
+import {
+  exportApplicationBackup,
+  importApplicationBackup,
+} from "@/features/storage/backup";
 import {
   createSettingsRepository,
   openChessForgeDatabase,
@@ -93,6 +97,7 @@ export function SettingsWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("general");
   const [playerNameInput, setPlayerNameInput] = useState("");
+  const backupInputRef = useRef<HTMLInputElement>(null);
   const { requestPersistence } = useStorageStatus();
   const capabilities = useBrowserCapabilities();
   const engineUsesTime = settings.enginePreferences.movetimeMs !== undefined;
@@ -175,6 +180,44 @@ export function SettingsWorkspace() {
         ? "Persistent storage granted."
         : "The browser did not grant persistent storage.",
     );
+  }
+
+  async function exportBackup() {
+    try {
+      const blob = await exportApplicationBackup();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `chessforge-backup-${new Date().toISOString().slice(0, 10)}.chessforge.zip`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success("Backup exported.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Backup export failed.",
+      );
+    }
+  }
+
+  async function importBackup(file: File) {
+    if (
+      !window.confirm(
+        "Importing this backup overwrites games, projects, templates, settings, and Library data in this browser. Continue?",
+      )
+    ) {
+      return;
+    }
+    try {
+      const summary = await importApplicationBackup(file);
+      toast.success(
+        `Backup restored from ${new Date(summary.createdAt).toLocaleString()}.`,
+      );
+      window.setTimeout(() => window.location.reload(), 600);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Backup import failed.",
+      );
+    }
   }
 
   return (
@@ -593,16 +636,47 @@ export function SettingsWorkspace() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button
-              variant="outline"
-              className="h-10 border-border/80 bg-transparent px-4"
-              onClick={() => void persist()}
-            >
-              Request persistent storage
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                className="h-10 border-border/80 bg-transparent px-4"
+                onClick={() => void persist()}
+              >
+                Request persistent storage
+              </Button>
+              <Button
+                type="button"
+                className="h-10 px-4"
+                onClick={() => void exportBackup()}
+              >
+                Export backup
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 border-border/80 bg-transparent px-4"
+                onClick={() => backupInputRef.current?.click()}
+              >
+                Import backup
+              </Button>
+              <input
+                ref={backupInputRef}
+                type="file"
+                accept=".zip,.chessforge,application/zip"
+                className="sr-only"
+                aria-label="Import ChessForge backup"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) void importBackup(file);
+                }}
+              />
+            </div>
             <p className="text-[11px] leading-relaxed text-muted-foreground">
               Persistent storage is a browser grant, not a guarantee. Export a
-              backup before clearing site data or changing devices.
+              backup before clearing site data or changing devices. The backup
+              includes games, analysis, projects, templates, assets, settings,
+              notes, repertoire, and learning progress.
             </p>
           </CardContent>
         </Card>

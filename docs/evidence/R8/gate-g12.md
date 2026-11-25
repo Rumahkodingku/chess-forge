@@ -9,14 +9,15 @@
 | Check | Command | Result |
 | --- | --- | --- |
 | Lint, typecheck, unit tests, production build | `npm run check:all` | Passed |
-| Unit and integration tests | `npm test` | 63 files, 306 tests passed |
-| Development E2E (R8 only) | `npx playwright test e2e/r8-library.spec.ts` | 10 tests passed |
-| Full development E2E | `npx playwright test` | 39 tests passed |
+| Unit and integration tests | `npm test` | 64 files, 308 tests passed |
+| Development E2E (R8 only) | `npx playwright test e2e/r8-library.spec.ts` | 11 tests passed |
+| Full development E2E | `npx playwright test` | 40 tests passed |
 | Production E2E | `npm run test:e2e:prod` | 7 tests passed |
 | Opening data validation | `src/features/analysis/openings/lookup.test.ts` | 3,865 entries with legal move sequences |
 | Puzzle data validation | `src/features/library/puzzles/load.test.ts` | 5,000 unique puzzles, 600–2400 |
 | Reference validation | `src/features/library/reference/index.test.ts` | 30 articles, unique slugs, legal diagram FENs, 700–1,000 words each |
 | Database migration | `src/features/storage/db.test.ts` | v1 game/settings survive v2 upgrade |
+| Application backup | `src/features/storage/backup.test.ts` | games, settings, notes, repertoire, and progress round-trip |
 
 ## Feature evidence
 
@@ -31,12 +32,13 @@
 - Analysis can save an identified opening to repertoire and add per-move notes.
 - Library landing and Dashboard show due reviews, completed articles, latest note, and continue reading.
 - Settings supports player-name aliases.
+- Settings can export and import a full `.chessforge.zip` backup that includes all Library stores.
 
 ## Known limitations
 
 1. Counters & Defenses uses named continuations from the bundled opening dataset plus on-demand engine analysis. It does not claim popularity or win-rate data.
 2. The mistake trainer is cache-first, but it still runs Stockfish on demand when no cached position exists.
-3. Backup/restore does not include the three new Library stores yet; R7 owns backup implementation and the roadmap now records that requirement.
+3. Single-project backup export remains an R7 deliverable. Full application backup including the three Library stores is implemented.
 4. Reference articles meet the 700–1,000-word range and structure checks, but the spec requires a human content sign-off. That sign-off is still pending.
 
 ## Bundle size
@@ -52,10 +54,9 @@
 - Read at least one article per category and confirm tone and accuracy. Record the sign-off in this file before treating G12 as fully closed.
 - Check the player-name alias flow with a real imported game.
 - Confirm that the 5,000-puzzle bundle feels acceptable on the reference device.
-- Verify R7 backup/restore includes `libraryNotes`, `repertoireLines`, and `learningProgress`.
 
 ## Review follow-up
 
 - Independent review on commit `a48996c` found one critical issue: promotion moves lost their piece suffix, so promotion puzzles could never be answered correctly. Fixed with a promotion chooser on the interactive board and a unit test.
 - Fixed in `5d2a803`: board no longer resets on every parent render, puzzle `lastMove` is UCI, repertoire review samples only the user's turns, unfinished games no longer count as draws, notes can be edited, article note metadata is preserved, duplicate repertoire lines are rejected, My Games has result/source/side/analysis filters, and Library search surfaces load errors.
-- Deferred minor items: none from the original critical/high list. Remaining work is external to R8: R7 backup integration and human content spot-check.
+- Deferred minor items: none from the original critical/high list. Remaining work is external to R8: single-project R7 backup export and human content spot-check.

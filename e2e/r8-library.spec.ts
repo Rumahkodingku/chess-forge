@@ -161,6 +161,15 @@ test.describe("R8 Chess Library", () => {
     ).toBeVisible();
   });
 
+  test("exports an application backup from Settings", async ({ page }) => {
+    await page.goto("/settings");
+    await page.getByRole("tab", { name: "Storage" }).click();
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Export backup" }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/\.chessforge\.zip$/);
+  });
+
   test("marks an article complete and saves a note", async ({ page }) => {
     await page.goto("/library/reference/lucena-position");
     await page.getByRole("button", { name: "Mark complete" }).click();

@@ -62,7 +62,7 @@ These pages are proof-of-concepts, not the daily workflow:
 
 ## Local data
 
-Games, projects, templates, settings, and uploaded audio are stored in IndexedDB in the browser. The application does not have accounts, cloud project storage, or cloud rendering. Browser storage can be cleared, so backups are part of the release scope.
+Games, projects, templates, settings, uploaded audio, and Chess Library data are stored in IndexedDB in the browser. The application does not have accounts, cloud project storage, or cloud rendering. Browser storage can be cleared, so Settings includes a full `.chessforge.zip` backup export and import.
 
 ## Documentation
 

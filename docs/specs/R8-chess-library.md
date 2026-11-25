@@ -2,7 +2,7 @@
 
 **Spec version:** 1.0
 **Status:** Implemented; code gates passed; human content sign-off pending
-**Phase:** R8 (roadmap insertion pending)
+**Phase:** R8
 **PRD mapping:** New module; supports G-03 and the target user's study goals
 **Exit gate:** G12
 **Depends on:** Gate G10 (R6). No hard dependency on R7 hardening.
