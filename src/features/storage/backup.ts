@@ -13,6 +13,7 @@ import {
 import { normalizeApplicationSettings } from "@/features/settings/types";
 import {
   type AssetRecord,
+  DB_VERSION,
   openChessForgeDatabase,
   toStorageError,
 } from "@/features/storage/db";
@@ -22,6 +23,7 @@ import { ValidationError } from "@/lib/errors";
 
 const BACKUP_FORMAT = "chessforge-backup";
 const BACKUP_VERSION = 1;
+const MAX_BACKUP_BYTES = 512 * 1024 * 1024;
 
 export const BACKUP_STORES = [
   "games",
@@ -176,7 +178,7 @@ export async function exportApplicationBackup(): Promise<Blob> {
   const manifest = backupManifestSchema.parse({
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
-    schemaVersion: 2,
+    schemaVersion: DB_VERSION,
     createdAt,
     counts,
   });
@@ -193,7 +195,13 @@ export async function importApplicationBackup(
 ): Promise<BackupSummary> {
   let entries: Record<string, Uint8Array>;
   try {
-    entries = unzipSync(new Uint8Array(await file.arrayBuffer()));
+    let totalBytes = 0;
+    entries = unzipSync(new Uint8Array(await file.arrayBuffer()), {
+      filter: (entry) => {
+        totalBytes += entry.originalSize;
+        return totalBytes <= MAX_BACKUP_BYTES;
+      },
+    });
   } catch {
     throw new ValidationError(
       "The backup file is not a readable ChessForge archive.",

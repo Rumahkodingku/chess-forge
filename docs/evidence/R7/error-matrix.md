@@ -4,7 +4,7 @@
 **Spec:** `docs/specs/R7-hardening-and-release.md` §4.2
 **Source requirements:** PRD §12
 **Phase:** R7
-**Status:** Final G11 state: 37 `covered`, 9 `partial`, 0 `missing`.
+**Status:** Final G11 state: 36 `covered`, 10 `partial`, 0 `missing`.
 
 ## How to read this matrix
 
@@ -83,7 +83,7 @@ leaves the previous valid state intact.
 | Persistence and backup | Backup unsupported version | `covered` | Import rejects with "The backup manifest is invalid or uses an unsupported version." before any write; a v99 manifest fails the strict version literal. | Use a backup created by a compatible ChessForge version. | `src/features/storage/backup.test.ts` "rejects an unsupported manifest version before writing"; `e2e/r7-release.spec.ts` "rejects unsupported full and project backup versions" |
 | Persistence and backup | Backup missing asset | `partial` | Import rejects with "The backup is missing an asset file." before the write transaction starts. | Use a complete application backup. | Code path in `src/features/storage/backup.ts`; no dedicated test |
 | Persistence and backup | Restore overwrite | `covered` | Full-app import asks for one confirmation. Single-project import offers Restore as copy or Overwrite; Overwrite requires a second confirmation. | Confirm the overwrite, choose Restore as copy, or cancel and keep local data. | `src/features/storage/project-backup.test.ts` "overwrites an existing project" and "restores a project as a copy with a new ID when the original exists"; `e2e/r7-release.spec.ts` "restores a project as a copy and overwrites only after confirmation" |
-| Persistence and backup | Restore rollback | `covered` | Full-app restore runs in one `readwrite` transaction over all stores. A failed write aborts; Settings shows the import error and the previous database stays intact. | Retry the import; local data is unchanged. | `src/features/storage/backup.test.ts` "rolls back the restore when a write fails" |
+| Persistence and backup | Restore rollback | `partial` | Full-app restore has an injected write-failure test. Single-project restore uses one project+asset transaction but has no injected write-failure test. | Retry the import; local data is unchanged. | `src/features/storage/backup.test.ts` "rolls back the restore when a write fails"; `project-backup.test.ts` missing-asset rejection |
 
 ## Export
 
@@ -102,8 +102,8 @@ leaves the previous valid state intact.
 
 | Status | Rows |
 | --- | ---: |
-| `covered` | 37 |
-| `partial` | 9 |
+| `covered` | 36 |
+| `partial` | 10 |
 | `missing` | 0 |
 | **Total** | **46** |
 

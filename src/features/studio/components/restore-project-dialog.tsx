@@ -18,7 +18,7 @@ import {
   type ProjectRestoreMode,
   restoreProjectBackup,
 } from "@/features/storage/project-backup";
-import { toErrorMessage } from "@/lib/errors";
+import { toErrorNotice } from "@/lib/errors";
 
 type RestoreState = "choose" | "inspecting" | "ready" | "restoring";
 
@@ -59,7 +59,7 @@ export function RestoreProjectDialog({
       setInspection(await inspectProjectBackup(fileToInspect));
       setState("ready");
     } catch (inspectError) {
-      setError(toErrorMessage(inspectError));
+      setError(toErrorNotice(inspectError));
       setState("choose");
     }
   }
@@ -86,7 +86,7 @@ export function RestoreProjectDialog({
       onRestored();
       onOpenChange(false);
     } catch (restoreError) {
-      setError(toErrorMessage(restoreError));
+      setError(toErrorNotice(restoreError));
       setState("ready");
     }
   }

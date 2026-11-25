@@ -19,6 +19,7 @@ import { createId } from "@/lib/id";
 
 const PROJECT_BACKUP_FORMAT = "chessforge-project";
 const PROJECT_BACKUP_VERSION = 1;
+const MAX_PROJECT_BACKUP_BYTES = 512 * 1024 * 1024;
 
 export interface ProjectBackupManifest {
   format: "chessforge-project";
@@ -140,7 +141,13 @@ export async function exportProjectBackup(projectId: string): Promise<Blob> {
 async function readProjectBackup(file: Blob): Promise<ProjectBackupContents> {
   let entries: Record<string, Uint8Array>;
   try {
-    entries = unzipSync(new Uint8Array(await file.arrayBuffer()));
+    let totalBytes = 0;
+    entries = unzipSync(new Uint8Array(await file.arrayBuffer()), {
+      filter: (entry) => {
+        totalBytes += entry.originalSize;
+        return totalBytes <= MAX_PROJECT_BACKUP_BYTES;
+      },
+    });
   } catch {
     throw new ValidationError(
       "The project backup is not a readable ChessForge archive.",
@@ -297,10 +304,11 @@ export async function restoreProjectBackup(
           : track,
       ),
     };
-    await projects.put(restored);
+    await projects.put(normalizeProject(restored));
     await transaction.done;
     return { projectId, mode };
   } catch (error) {
+    transaction.done.catch(() => {});
     try {
       transaction.abort();
     } catch {

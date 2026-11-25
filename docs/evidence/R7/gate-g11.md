@@ -123,8 +123,8 @@ backup and restore cases.
 
 | Status | Rows |
 | --- | ---: |
-| `covered` | 37 |
-| `partial` | 9 |
+| `covered` | 36 |
+| `partial` | 10 |
 | `missing` | 0 |
 | **Total** | **46** |
 
@@ -152,7 +152,8 @@ acceptance criteria.
 | Full application export and import | `src/features/storage/backup.test.ts` "exports and restores games, library data, settings, and assets"; `e2e/r7-release.spec.ts` "restores a full application backup from Settings" | PASS |
 | Full application restore validates every record before writing | `src/features/storage/backup.test.ts` "rejects a backup with an invalid store record and keeps existing data" | PASS |
 | Unsupported full-app version | `src/features/storage/backup.test.ts` "rejects an unsupported manifest version before writing"; development E2E rejects `chessforge-backup` v99 | PASS |
-| Restore rollback after an injected write failure | `src/features/storage/backup.test.ts` "rolls back the restore when a write fails"; original game and project remain | PASS |
+| Full-app restore rollback after an injected write failure | `src/features/storage/backup.test.ts` "rolls back the restore when a write fails"; original game and project remain | PASS |
+| Single-project restore rollback | `project-backup.test.ts` covers missing-asset rejection before write; no injected write-failure test for the project transaction | PARTIAL |
 | Single-project export | `src/features/storage/project-backup.test.ts` "exports a project ZIP with a manifest and only referenced assets" | PASS |
 | Single-project restore as copy | `src/features/storage/project-backup.test.ts` "restores a project as a copy with a new ID when the original exists"; development E2E copy test opens the copy and checks its content | PASS |
 | Single-project overwrite with second confirmation | `src/features/storage/project-backup.test.ts` "overwrites an existing project"; development E2E dismisses and then accepts the confirmation and checks the backed-up content | PASS |
@@ -236,7 +237,7 @@ against a live proxy.
 | `docs/troubleshooting.md` | PASS | Storage, migration, backup, restore, engine, export, and deployment failures |
 | `docs/adr/README.md` | PASS | ADR 0001–0017 index plus the R7 decisions section; no new ADR was needed |
 | `docs/THIRD_PARTY_NOTICES.md` | PASS | Runtime, development, data, font, and asset licences, including the transitive Mediabunny encoders |
-| `docs/evidence/R7/error-matrix.md` | PASS | 46 rows, 37 covered, 9 partial, 0 missing |
+| `docs/evidence/R7/error-matrix.md` | PASS | 46 rows, 36 covered, 10 partial, 0 missing |
 | `docs/evidence/R7/performance.md` | PASS | Automated budgets and manual reference-device checklist |
 | `docs/evidence/R7/accessibility.md` | PASS | Keyboard/focus/name/contrast/reduced-motion checklist |
 | `docs/evidence/R7/gate-g11.md` | PASS | This record |
