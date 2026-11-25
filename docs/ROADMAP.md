@@ -5,7 +5,7 @@ roadmap_version: "1.0"
 prd_version: "1.0"
 prd_revision: "1.1"
 status: Approved for implementation
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 language: en
 ---
 
@@ -599,6 +599,8 @@ The UI must label it `Candidate Brilliant`, store `pending`, `accepted`, or `rej
 **Spec:** `docs/specs/R7-hardening-and-release.md`.
 
 **Entry criteria:** Gate G10 passes. Gate G11 also includes G12 for the final release.
+
+**Execution status (2026-11-25):** R7 code, documentation, and local release tasks are complete. Gate evidence is in `docs/evidence/R7/gate-g11.md`. The full gate passed: `npm run check:all` (67 test files, 344 tests), development E2E 49, production E2E 11, and Docker build and healthcheck. Gate G11 remains **OPEN** pending the R8 human content sign-off in `docs/evidence/R8/gate-g12.md`. Live Coolify basic auth was not exercised; G4 remains local PASS / live BLOCKED. The error matrix has no `missing` rows and nine documented `partial` rows.
 
 ### 12.1 Tasks
 

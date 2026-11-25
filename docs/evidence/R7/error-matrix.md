@@ -4,7 +4,7 @@
 **Spec:** `docs/specs/R7-hardening-and-release.md` §4.2
 **Source requirements:** PRD §12
 **Phase:** R7
-**Status:** Live document. Rows move to `covered` as R7 tasks land.
+**Status:** Final G11 state: 37 `covered`, 9 `partial`, 0 `missing`.
 
 ## How to read this matrix
 
@@ -80,9 +80,9 @@ leaves the previous valid state intact.
 | Persistence and backup | Quota exceeded | `covered` | `StorageQuotaError`: "Browser storage is full." | Remove unused projects or export a backup. | `toStorageError` in `src/features/storage/db.ts`; manual browser quota check |
 | Persistence and backup | Migration fails | `partial` | Upgrade errors throw `StorageMigrationError`; a blocked upgrade throws `StorageBlockedError` with "The local database upgrade is blocked by another ChessForge tab." Page-level callers show the message only; the global error screen shows message plus recovery for uncaught errors. | "Close other ChessForge tabs, reload this page, and try again." For a failed upgrade: "Export a backup, then clear site data and re-import." Showing recovery on page-level load errors is an R7-T01a gap. | `src/features/storage/db.test.ts` "surfaces a blocked upgrade as a recoverable error", "rejects a blocked upgrade when another tab keeps the old version open", and the v1→v2 migration test |
 | Persistence and backup | Project data corrupted | `covered` | Studio project list shows "A stored project was damaged and was skipped. Export a backup, then clear site data and re-import." while valid projects load. Single reads throw `ValidationError` with the same recovery. | Follow the banner recovery, or open a valid project. | `src/features/storage/db.test.ts` "skips a corrupt project while other projects load" and "reports a corrupt project read with the skipped-project recovery" |
-| Persistence and backup | Backup unsupported version | `partial` | Import rejects with "The backup manifest is invalid or uses an unsupported version." The actual version is not shown. | Use a backup from a compatible ChessForge version. Explicit version detail is an R7-T04/T03a gap. | `src/features/storage/backup.test.ts` "rejects a file that is not a ChessForge backup"; no versioned-manifest test |
+| Persistence and backup | Backup unsupported version | `covered` | Import rejects with "The backup manifest is invalid or uses an unsupported version." before any write; a v99 manifest fails the strict version literal. | Use a backup created by a compatible ChessForge version. | `src/features/storage/backup.test.ts` "rejects an unsupported manifest version before writing"; `e2e/r7-release.spec.ts` "rejects unsupported full and project backup versions" |
 | Persistence and backup | Backup missing asset | `partial` | Import rejects with "The backup is missing an asset file." before the write transaction starts. | Use a complete application backup. | Code path in `src/features/storage/backup.ts`; no dedicated test |
-| Persistence and backup | Restore overwrite | `partial` | Full-app import asks for one confirmation before overwriting. Single-project overwrite with a second confirmation is not implemented yet. | Confirm the overwrite, or cancel and keep local data. | `src/features/settings/settings-workspace.tsx` confirm; single-project path pending R7-T03 |
+| Persistence and backup | Restore overwrite | `covered` | Full-app import asks for one confirmation. Single-project import offers Restore as copy or Overwrite; Overwrite requires a second confirmation. | Confirm the overwrite, choose Restore as copy, or cancel and keep local data. | `src/features/storage/project-backup.test.ts` "overwrites an existing project" and "restores a project as a copy with a new ID when the original exists"; `e2e/r7-release.spec.ts` "restores a project as a copy and overwrites only after confirmation" |
 | Persistence and backup | Restore rollback | `covered` | Full-app restore runs in one `readwrite` transaction over all stores. A failed write aborts; Settings shows the import error and the previous database stays intact. | Retry the import; local data is unchanged. | `src/features/storage/backup.test.ts` "rolls back the restore when a write fails" |
 
 ## Export
@@ -102,16 +102,20 @@ leaves the previous valid state intact.
 
 | Status | Rows |
 | --- | ---: |
-| `covered` | 35 |
-| `partial` | 11 |
+| `covered` | 37 |
+| `partial` | 9 |
 | `missing` | 0 |
 | **Total** | **46** |
 
-The matrix has no `missing` rows. Remaining `partial` rows map to R7 tasks:
-T01 (documented limits, duration feedback, engine memory/option explanations,
-incomplete-game warning, scene-ply warning, preview retry), T01a (page-level
-migration recovery), T03 (single-project overwrite), and T04 (versioned-manifest
-detail and a dedicated missing-asset backup test).
+The matrix has no `missing` rows. Nine `partial` rows remain: documented
+long-game limits, incomplete-game warning, engine memory and option
+explanations, scene-ply warning, duration feedback, preview retry, page-level
+migration recovery, and a dedicated full-app missing-asset test. They are
+recorded as known limitations in `docs/evidence/R7/gate-g11.md`.
+
+R7-T03 closed the single-project overwrite row and R7-T04 closed the
+unsupported-version row. Task 10 corrected both statuses, which had stayed
+`partial` after those tasks landed.
 
 ## R7 changes recorded here
 

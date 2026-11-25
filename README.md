@@ -8,7 +8,7 @@ The application has no accounts, no cloud project storage, and no server-side us
 
 Feature-complete through R8 (Chess Library). R7 release hardening covers full and single-project backup and restore, performance and accessibility checks, deployment documentation, and troubleshooting.
 
-Release work remains. `docs/evidence/R7/error-matrix.md` still records 11 `partial` rows. The seven-scenario release E2E suite and the Gate G11 evidence record are also pending. See `docs/ROADMAP.md` and `docs/specs/R7-hardening-and-release.md`.
+Release evidence is recorded in `docs/evidence/R7/gate-g11.md`. The seven-scenario development and production E2E suites pass, and the error matrix has no `missing` rows. Gate G11 remains open pending the R8 human content sign-off described in `docs/evidence/R8/gate-g12.md`; live Coolify basic auth is still a deployment step. See `docs/ROADMAP.md` and `docs/specs/R7-hardening-and-release.md`.
 
 ## Requirements
 
@@ -106,7 +106,7 @@ The export panel detects codecs at runtime, disables unsupported formats, and sh
 - `docs/troubleshooting.md`: storage, migration, backup, restore, engine, export, and deployment failures.
 - `docs/specs/`: phase specifications, including R7 hardening and release.
 - `docs/adr/`: architecture decisions and index.
-- `docs/evidence/R7/`: error matrix, performance, and accessibility evidence.
+- `docs/evidence/R7/`: Gate G11 evidence, error matrix, performance, and accessibility records.
 - `docs/THIRD_PARTY_NOTICES.md`: licences and attribution.
 
 ## Licences
